@@ -13,5 +13,5 @@ clean:
 wdcForth: $(SRCS)
 	$(AS) $(ASFLAGS) --s-record -o $@ -L $@.lis --map $@.map $<
 
-forth_main.s: fth_main.fs
+fth_main.s: fth_main.fs
 	$(RFC) --arch ca6502 fth_main.fs > $@

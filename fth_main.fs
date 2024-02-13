@@ -16,7 +16,7 @@ dict:
     .text format("%-5s", \name[:5])
     .link_entry \{sym}.dict
 cfa:
-    .addr \act                  ; CFA
+    jmp \act                  ; CFA
     .endmacro                   ; PFA implicit, follows macro
 
 CODE_W .macro sym name_len name flgs=0
@@ -25,263 +25,123 @@ dict:
     .text format("%-5s", \name[:5])
     .link_entry \{sym}.dict
 cfa:
-    .addr (* + 2)               ; CFA
     .endmacro                   ; PFA implicit, follows macro
 
 NEXT .macro
     jmp do_next
     .endmacro
 
-RPUSH .macro reg
-    movl \reg, -(RSP)
-    .endmacro
-
-RPOP .macro reg
-    jsr check_rstack_underflow
-    movl (RSP)+, \reg
-    .endmacro
-
 DPUSH .macro reg
     movl \reg, -(PSP)
     .endmacro
 
-DPOP .macro reg
-    jsr check_pstack_underflow
-    movl (PSP)+, \reg
-    .endmacro
-
-    .data
-    .align 4
-
 banner_str: .text "Holdfire 0.0"
 banner_len: .word (* - banner_str)
 
-cold0:  .int cold
-ssp_bottom:
-    .space (64 * 4)
-ssp0:    .int
-rsp_bottom:
-        .space (64 * 4)
-rsp0:   .int                    | dummy
-csp_bottom:
-        .space (64 * 4)
-csp0:   .int                    | dummy
-psp_bottom:
-        .space (64 * 4)
-psp0:   .int                    | dummy
+    HIGH_W tib 3 "tib" act=do_var
+    .fill 132
 
-        HIGH_W tib 3 "tib" act=do_var
-        .space 132
+    HIGH_W pic_num 7 "pic_num" act=do_var
+    .fill 12
 
-        HIGH_W pic_num 7 "pic_num" act=do_var
-        .space 12
+    HIGH_W word_space 10 "word_space" act=do_var
+    .fill 80
 
-        HIGH_W word_space 10 "word_space" act=do_var
-        .space 256
-
-        HIGH_W core_dict 9 "core_dict" act=do_const
-        .int dict_head
+    HIGH_W core_dict 9 "core_dict" act=do_const
+    .addr dict_head
 
 here_store:
-    .int    0
-
-    .text
-    .globl  _start
-_start:
-    lea ssp0, SSP
-    lea rsp0, RSP
-    lea psp0, PSP
-    lea csp0, CSP
-    lea cold0, IP
-    movea.l    #0x10000140,TA0
-    move.l    #0x13, %d0
-    move.b    %d0, (TA0)
-    move.l    #0x07, %d0
-    move.b    %d0, (TA0)
-    movea.l    #0x10000148,TA0
-    move.l    #0x05, %d0
-    move.b    %d0, (TA0)
-    || Fall through to "next"
-do_next:
-    movl    (IP), W
-    addq.l  #4, IP
-    movl    (W), TA0
-    jmp     (TA0)
-
-check_pstack_underflow:
-    lea   psp0, TA0
-    cmpal TA0, PSP
-    beq   1f
-    rts
-1:  movel #0xe1e1e1e1, %d0
-    bra   1b
-
-check_rstack_underflow:
-    lea   rsp0, TA0
-    cmpal TA0, RSP
-    beq   1f
-    rts
-1:  movel #0xd1d1d1d1, %d0
-    bra   1b
-
-await_char:
-    moveal  #0x10000144, TA0
-1:  btst.b  #1, (TA0)
-    beq     1b
-    rts
-
-output_ready:
-    moveal  #0x10000144, TA0
-1:  btst.b  #3, (TA0)
-    beq     1b
-    rts
-
-outchar:
-    move.l    TA0, -(SSP)
-    movea.l    #0x1000014c,TA0
-    move.b    %d0, (TA0)
-    move.l    (SSP)+, TA0
-    rts
-
-dump_long:
-    move.l    %d3, -(SSP)
-    move.l    %d2, -(SSP)
-    move.l    %d0, %d3
-    move.l    #28, %d1
-1:  move.l    %d3, %d0
-    lsr.l    %d1, %d0
-    andi.l    #0x0f, %d0
-    cmp.l    #0x0a, %d0
-    blt    2f
-    addi.l    #(65 - 0x30 - 10), %d0
-2:  addi.l    #0x30, %d0
-    jsr    outchar
-    subq.l    #4, %d1
-    cmp.l    #0, %d1
-    bge    1b
-    move.l    %d2, (SSP)+
-    move.l    %d3, (SSP)+
-    rts
-
-debug_dump:
-    move.b    #0x52, %d0
-    jsr    outchar
-    move.b    #0x3a, %d0
-    jsr    outchar
-    movea.l    RSP, TA1
-    lea    rsp0, TA2
-1:  cmp.l    TA1, TA2
-    beq    2f
-    move.l    (TA1)+, %d0
-    jsr    dump_long
-    move.b    #0x20, %d0
-    jsr    outchar
-    bra    1b
-2:  move.b    #10, %d0
-    jsr    outchar
-    move.b    #13, %d0
-    jsr    outchar
-    rts
-
-debug_trace:
-    movb    #0x40, %d0
-    jsr     outchar
-    movb    #0x3a, %d0
-    jsr     outchar
-    lea rsp0, TA2
-    subal RSP, TA2
-    movl    TA2, %d0
-    jsr     dump_long
-    move.b    #0x20, %d0
-    jsr    outchar
-    movl    W, %d0
-    jsr     dump_long
-    move.b    #10, %d0
-    jsr    outchar
-    move.b    #13, %d0
-    jsr    outchar
-    jmp     do_enter
+    .addr   0
 
 do_enter:
-    |jsr    debug_dump
-    RPUSH   IP
-    movl    W, IP
-    addq.l  #4, IP
+    ;jsr    debug_dump
+    lda ip+1
+    pha
+    lda ip
+    pha
+    clc
+    lda w
+    adc #3
+    sta ip
+    lda w+1
+    adc #0
+    sta ip+1
     .NEXT
 
 do_var:
-    DPUSH   TOS
-    movl    W, TOS
-    addq.l  #4, TOS
+    clc
+    lda w
+    adc #3
+    sta (psp)
+    dec psp
+    adc w+1
+    sta (psp)
+    dec psp
     .NEXT
 
 do_const:
-    DPUSH   TOS
-    movl    4(W), TOS
+    ldy #3
+    lda (w),y
+    sta (psp)
+    dec psp
+    iny
+    lda (w),y
+    sta (psp)
+    dec psp
     .NEXT
 
-END-CODE
-
-CODE does_var
-    DPUSH   TOS
-    movl    do_var, TOS
 END-CODE
 
 ( Low-level Forth engine support )
 CODE lit
-    DPUSH TOS
-    movl  (IP)+, TOS
+    ldy #1
+    lda (ip),y
+    sta (psp)
+    dec psp
+    lda (ip)
+    sta (psp)
+    dec psp
+    clc
+    lda ip
+    adc #2
+    sta ip
+    bcc +
+    inc ip+1
++:
 END-CODE
 
 CODE banner
-    movl TOS, -(PSP)
-    movl  #banner_str, -(PSP)
-    lea   banner_len, TA0
-    movl  (TA0), TOS
-END-CODE
-
-CODE debugdump
-    jsr debug_dump
+    lda #>banner_str
+    sta (psp)
+    dec psp
+    lda #<banner_str
+    sta (psp)
+    dec psp
+    lda #>banner_len
+    sta (psp)
+    dec psp
+    lda #<banner_len
+    sta (psp)
+    dec psp
 END-CODE
 
 CODE exit
-    RPOP IP
+    pla
+    sta ip
+    pla
+    sta ip+1
 END-CODE
-
-( Coldfire processor-specific stuff )
-
-0x10000000 CONSTANT mbar
-0x140 CONSTANT uart_umr
-0x144 CONSTANT uart_usr
-0x148 CONSTANT uart_ucr
-0x14c CONSTANT uart_urb
-0x150 CONSTANT uart_uacr
-0x154 CONSTANT uart_uisr
-0x158 CONSTANT uart_ubg1
-0x15c CONSTANT uart_ubg2
-0x170 CONSTANT uart_uivr
-0x174 CONSTANT uart_uip
-0x178 CONSTANT uart_uop1
-0x17c CONSTANT uart_uop0
 
 132 CONSTANT tiblen
 
-: to_mbar ( x -- x )
-    mbar +
-;
-
-: cf_init_uart ( -- )
-    0x13 uart_umr to_mbar c!
-    0x07 uart_umr to_mbar c!
-    0x05 uart_ucr to_mbar c!
-;
-
 CODE p0
-    lea psp0, PSP
+    lda #w + (PSTACK_SIZE << 1) - 1
+    sta psp
 END-CODE
 
 CODE r0
-    lea rsp0, RSP
+    ldx #$ff
+    txs
 END-CODE
 
 ( Brute-force until pictured numeric support added )
@@ -300,10 +160,10 @@ END-CODE
 ;
 
 CODE emit
-    jsr     output_ready
-    movb    TOS, %d0
-    jsr     outchar
-    movl    (PSP)+, TOS
+    inc psp
+    lda (psp)
+    jsr     usb_tx
+    inc psp
 END-CODE
 
 : type ( c-addr u -- )
@@ -333,98 +193,182 @@ END-CODE
     then
 ;
 
-: key ( -- c )
-    uart_usr to_mbar
-    begin
-        dup c@
-        1 and
-    until
-    drop
-    uart_urb to_mbar c@
-;
+CODE key ( -- c )
+    lda #0
+    sta (psp)
+    dec psp
+    jsr usb_rx
+    sta (psp)
+    dec psp
+END-CODE
 
 CODE unloop
-    addql #8, RSP
+    pla
+    pla
+    pla
+    pla
 END-CODE
 
 CODE depth
-    movl TOS, -(PSP)
-    lea  psp0, TA0
-    movl TA0, TOS
-    subl PSP, TOS
-    lsrl #2, TOS
-    subl #1, TOS
+    lda #0
+    sta (psp)
+    dec psp
+    sec
+    lda #w + (PSTACK_SIZE << 1) - 1
+    sbc psp
+    lsr a
+    sta (psp)
+    dec psp
 END-CODE
 
 CODE pstackptr
-    movl TOS, -(PSP)
-    lea psp0, TA0
-    movl TA0, TOS
-    subql #4, TOS
+    ldx psp
+    lda #0
+    sta (psp)
+    dec psp
+    txa
+    sta (psp)
+    dec psp
 END-CODE
 
 CODE dup
-    movl TOS, -(PSP)
+    ldy #2
+    lda (psp),y
+    sta (psp)
+    dec psp
+    lda (psp),y
+    sta (psp)
+    dec psp
 END-CODE
 
 CODE ?dup
-    cmpl #0, TOS
-    beq 1f
-    movl TOS, -(PSP)
-1:
+    ldy #2
+    cmp (psp),y
+    bne +
+    dey
+    cmp (psp),y
+    beq ++
++:  iny
+    lda (psp),y
+    sta (psp)
+    dec psp
+    lda (psp),y
+    sta (psp)
+    dec psp
++:
 END-CODE
 
 CODE drop
-    movl (PSP)+, TOS
+    inc psp
+    inc psp
 END-CODE
 
 CODE swap
-    movl (PSP), %d0
-    movl TOS, (PSP)
-    movl %d0, TOS
+    inc psp
+    ldy #2
+    lda (psp)
+    tax
+    lda (psp),y
+    sta (psp)
+    txa
+    sta (psp),y
+    inc psp
+    lda (psp)
+    tax
+    lda (psp),y
+    sta (psp)
+    txa
+    sta (psp),y
+    dec psp
+    dec psp
 END-CODE
 
 CODE over
-    movl TOS, -(PSP)
-    movl 4(PSP), TOS
+    ldy #2
+    lda (psp),y
+    sta (psp)
+    dec psp
+    lda (psp),y
+    sta (psp)
+    dec psp
 END-CODE
 
 CODE nip
-    addql #4, PSP
+    ldy #2
+    inc psp
+    lda (psp)
+    sta (psp),y
+    inc psp
+    lda (psp)
+    sta (psp),y
 END-CODE
 
 CODE tuck
-    movl (PSP), -(PSP)
-    movl TOS, 4(PSP)
+    dec psp
+    ldx #2
+-:  ldy #2
+    lda (psp),y
+    sta (psp)
+    ldy #4
+    lda (psp),y
+    ldy #2
+    sta (psp),y
+    ldy #4
+    lda (psp)
+    sta (psp),y
+    inc psp
+    dex
+    bne -
+    dec psp
+    dec psp
+    dec psp
 END-CODE
 
 CODE pick
-    movl (PSP,TOS:l:4), TOS
+    inc psp
+    lda (psp)
+    inc a
+    asl a
+    tay
+    lda (psp),y
+    sta (psp)
+    inc psp
+    lda (psp),y
+    sta (psp)
+    dec psp
+    dec psp
 END-CODE
 
 CODE 2drop
-    movl 4(PSP), TOS
-    addql #8, PSP
+    clc
+    lda psp
+    adc #4
+    sta psp
 END-CODE
 
 CODE 2dup
-    movl TOS, -(PSP)
-    movl 4(PSP), -(PSP)
+    dec psp
+    dec psp
+    dec psp
+    ldy #4
+    ldx #4
+-:  lda (psp),y
+    sta (psp)
+    inc psp
+    dex
+    bne -
+    sec
+    lda psp
+    sbc #5
+    sta psp
 END-CODE
 
 CODE 2over
-    movl TOS, -(PSP)
-    movl 12(PSP), -(PSP)
-    movl 12(PSP), TOS
+    ;; FIXME
 END-CODE
 
 CODE 2swap
-    movl 4(PSP), %d0  | x2 -> %d0
-    movl TOS, 4(PSP)  | x4 -> old x2
-    movl %d0, TOS     | x2 -> old x4
-    movl 8(PSP), %d0  | x1 -> %d0
-    movl (PSP), 8(PSP)| x3 -> old x1
-    movl %d0, (PSP)   | x1 -> old x3
+    ;; FIXME
 END-CODE
 
 CODE rot
@@ -435,29 +379,103 @@ CODE rot
 END-CODE
 
 CODE and
-    andl (PSP)+, TOS
+    ldx #2
+    ldy #2
+-:  inc psp
+    lda (psp)
+    and (psp),y
+    sta (psp),y
+    dex
+    bne -
 END-CODE
 
 CODE or
-    orl  (PSP)+, TOS
+    ldx #2
+    ldy #2
+-:  inc psp
+    lda (psp)
+    ora (psp),y
+    sta (psp),y
+    dex
+    bne -
 END-CODE
 
 CODE =
-    cmpl  (PSP)+, TOS
-    seq   TOS
-    extbl TOS
+    ldy #2
+
+    inc psp
+    lda (psp)
+    cmp (psp),y
+    bne .notequal1
+
+    inc psp
+    lda (psp)
+    cmp (psp),y
+    bne .notequal2
+
+    lda #ff
+    sta (psp),y
+    dey
+    sta (psp),y
+    bra .finished
+notequal1:
+    inc psp
+notequal2:  
+    lda #00
+    sta (psp),y
+    dey
+    sta (psp),y
+finished:
 END-CODE
 
 CODE <>
-    cmpl  (PSP)+, TOS
-    sne   TOS
-    extbl TOS
+    ldy #2
+
+    inc psp
+    lda (psp)
+    cmp (psp),y
+    bne .notequal1
+
+    inc psp
+    lda (psp)
+    cmp (psp),y
+    bne .notequal2
+
+    lda #00
+    sta (psp),y
+    dey
+    sta (psp),y
+    bra .finished
+notequal1:
+    inc psp
+notequal2:  
+    lda #ff
+    sta (psp),y
+    dey
+    sta (psp),y
+finished:
 END-CODE
 
 CODE 0=
-    cmpil #0, TOS
-    seq   TOS
-    extbl TOS
+    ldy #2
+    lda (psp),y
+    bne .notequal1
+    dey
+    lda (psp),y
+    bne .notequal2
+    lda #ff
+    sta (psp),y
+    iny
+    sta (psp),y
+    bra .finished
+notequal1:
+    dey
+notequal2:
+    lda #00
+    sta (psp),y
+    iny
+    sta (psp),y
+finished:
 END-CODE
 
 CODE invert

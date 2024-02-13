@@ -1,11 +1,54 @@
     .cpu "65c02"
     .include "wdc65c816sxb.inc"
 
+    PSTACK_SIZE = 48
+
+    ;; Set up symbols for the zero elements
+    * = $24
+psp:    .byte ?
+wjmp:   .byte ?
+w:      .addr ?
+ip:     .addr ?
+pstack: .fill (PSTACK_SIZE * 2)
+
     * = $200
 
 start:
     sei
-    jmp start                   ; fixme
+    lda #$6c               ; jmp (a) opcode
+    sta wjmp               ; Now we can do 'jmp wjmp' to get 'jmp (w)'
+    ;; Init parameter stack
+    lda #w + (PSTACK_SIZE << 1) - 1
+    sta psp
+    ;; Init return stack
+    ldx #$ff
+    txs
+    ;; Init hardware.  FIXME to make this per-platform
+    lda #1
+    jsr set_led
+    jsr usb_init
+    ;; Load IP with "cold"
+    ;; Then fall through to "next"
+    lda #<cold.cfa
+    sta ip
+    lda #>cold.cfa
+    sta ip+1
+    ;; fall through to do_next
+
+do_next:
+    ldy #1
+    lda (ip)
+    sta w
+    jsr set_led                 ; DEBUG blinky activity
+    lda (ip),y
+    sta w+1
+    clc
+    lda ip
+    adc #2
+    sta ip
+    bcc +
+    inc ip+1
++   jmp wjmp
 
 set_led:
     pha                         ; Save selected LED(s)
@@ -16,7 +59,7 @@ set_led:
     lda #04                     ; ORA access
     sta PIA_A_CTRL
     pla                         ; Fetch select LED(s)
-    sta PIA_A_DATA              ; turn on one LED, indicate we're running
+    sta PIA_A_DATA
     rts
 
 usb_init:
@@ -63,3 +106,5 @@ usb_rx:
     sta USB_CTRL_OR
     pla
     rts
+
+    .include "fth_main.s"
