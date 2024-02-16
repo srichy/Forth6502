@@ -29,9 +29,9 @@ start:
     jsr usb_init
     ;; Load IP with "cold"
     ;; Then fall through to "next"
-    lda #<cold.cfa
+    lda #<w_cold.cfa
     sta ip
-    lda #>cold.cfa
+    lda #>w_cold.cfa
     sta ip+1
     ;; fall through to do_next
 

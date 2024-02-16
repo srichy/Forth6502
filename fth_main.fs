@@ -10,20 +10,20 @@ link_entry .macro new_entry
     previous_entry := \new_entry
     .endmacro
 
-HIGH_W .macro sym name_len name act=do_enter flgs=0
+HIGH_W .macro name_len, name, act=w_enter, flgs=0
 dict:
-    .byte (flgs << 7) | len(\name)
+    .byte (\flgs << 7) | len(\name)
     .text format("%-5s", \name[:5])
-    .link_entry \{sym}.dict
+    .link_entry dict
 cfa:
     jmp \act                  ; CFA
     .endmacro                   ; PFA implicit, follows macro
 
-CODE_W .macro sym name_len name flgs=0
+CODE_W .macro name_len, name, flgs=0
 dict:
-    .byte (flgs << 7) | len(\name)
+    .byte (\flgs << 7) | len(\name)
     .text format("%-5s", \name[:5])
-    .link_entry \{sym}.dict
+    .link_entry dict
 cfa:
     .endmacro                   ; PFA implicit, follows macro
 
@@ -38,22 +38,23 @@ DPUSH .macro reg
 banner_str: .text "Holdfire 0.0"
 banner_len: .word (* - banner_str)
 
-    HIGH_W tib 3 "tib" act=do_var
+w_tib    .HIGH_W 3, "tib", w_var
     .fill 132
 
-    HIGH_W pic_num 7 "pic_num" act=do_var
+w_pic_num    .HIGH_W 7, "pic_num", w_var
     .fill 12
 
-    HIGH_W word_space 10 "word_space" act=do_var
+w_word_space    .HIGH_W 10, "word_space", w_var
     .fill 80
 
-    HIGH_W core_dict 9 "core_dict" act=do_const
+w_core_dict    .HIGH_W 9, "core_dict", w_const
     .addr dict_head
 
 here_store:
     .addr   0
 
-do_enter:
+w_enter .block
+cfa
     ;jsr    debug_dump
     lda ip+1
     pha
@@ -67,8 +68,10 @@ do_enter:
     adc #0
     sta ip+1
     .NEXT
+  .endblock
 
-do_var:
+w_var .block
+cfa
     clc
     lda w
     adc #3
@@ -78,8 +81,10 @@ do_var:
     sta (psp)
     dec psp
     .NEXT
+  .endblock
 
-do_const:
+w_const .block
+cfa
     ldy #3
     lda (w),y
     sta (psp)
@@ -89,6 +94,7 @@ do_const:
     sta (psp)
     dec psp
     .NEXT
+  .endblock
 
 END-CODE
 
@@ -107,7 +113,7 @@ CODE lit
     sta ip
     bcc +
     inc ip+1
-+:
++
 END-CODE
 
 CODE banner
@@ -193,7 +199,8 @@ END-CODE
     then
 ;
 
-CODE key ( -- c )
+( -- c )
+CODE key
     lda #0
     sta (psp)
     dec psp
@@ -248,14 +255,14 @@ CODE ?dup
     dey
     cmp (psp),y
     beq ++
-+:  iny
++  iny
     lda (psp),y
     sta (psp)
     dec psp
     lda (psp),y
     sta (psp)
     dec psp
-+:
++
 END-CODE
 
 CODE drop
@@ -306,7 +313,7 @@ END-CODE
 CODE tuck
     dec psp
     ldx #2
--:  ldy #2
+-  ldy #2
     lda (psp),y
     sta (psp)
     ldy #4
@@ -352,7 +359,7 @@ CODE 2dup
     dec psp
     ldy #4
     ldx #4
--:  lda (psp),y
+-  lda (psp),y
     sta (psp)
     inc psp
     dex
@@ -381,7 +388,7 @@ END-CODE
 CODE and
     ldx #2
     ldy #2
--:  inc psp
+-  inc psp
     lda (psp)
     and (psp),y
     sta (psp),y
@@ -392,7 +399,7 @@ END-CODE
 CODE or
     ldx #2
     ldy #2
--:  inc psp
+-  inc psp
     lda (psp)
     ora (psp),y
     sta (psp),y
@@ -406,26 +413,26 @@ CODE =
     inc psp
     lda (psp)
     cmp (psp),y
-    bne .notequal1
+    bne notequal1
 
     inc psp
     lda (psp)
     cmp (psp),y
-    bne .notequal2
+    bne notequal2
 
-    lda #ff
+    lda #$ff
     sta (psp),y
     dey
     sta (psp),y
-    bra .finished
-notequal1:
+    bra finished
+notequal1
     inc psp
-notequal2:  
+notequal2
     lda #00
     sta (psp),y
     dey
     sta (psp),y
-finished:
+finished
 END-CODE
 
 CODE <>
@@ -434,48 +441,48 @@ CODE <>
     inc psp
     lda (psp)
     cmp (psp),y
-    bne .notequal1
+    bne notequal1
 
     inc psp
     lda (psp)
     cmp (psp),y
-    bne .notequal2
+    bne notequal2
 
     lda #00
     sta (psp),y
     dey
     sta (psp),y
-    bra .finished
-notequal1:
+    bra finished
+notequal1
     inc psp
-notequal2:  
-    lda #ff
+notequal2
+    lda #$ff
     sta (psp),y
     dey
     sta (psp),y
-finished:
+finished
 END-CODE
 
 CODE 0=
     ldy #2
     lda (psp),y
-    bne .notequal1
+    bne notequal1
     dey
     lda (psp),y
-    bne .notequal2
-    lda #ff
+    bne notequal2
+    lda #$ff
     sta (psp),y
     iny
     sta (psp),y
-    bra .finished
-notequal1:
+    bra finished
+notequal1
     dey
-notequal2:
+notequal2
     lda #00
     sta (psp),y
     iny
     sta (psp),y
-finished:
+finished
 END-CODE
 
 CODE invert
@@ -899,7 +906,7 @@ VARIABLE dict_start
     10 emit
 ;
 
-: star ( -- )
+: splat ( -- )
     42 emit
 ;
 
@@ -1054,13 +1061,13 @@ VARIABLE dict_start
     0 c, ( make non-immediate )
     bl word 15 cstr_to_here
     dict_start @ ,
-    lit do_var ,
+    lit var ,
     dict_start !
 ;
 
 : :
     create
-    lit do_enter here 4 - !
+    lit enter here 4 - !
     1 state !
 ;
 
