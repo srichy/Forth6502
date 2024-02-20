@@ -34,3 +34,27 @@ First attempt will be an ITC (Indirect-Threaded Code) Forth model
   - Zero-page addr (two bytes)
   - This will hold the "currently-executing" word and allow
     for a `jmp (W)` (sort-of; not literally)
+
+## Design Doodles
+
+### Rot
+
+|---|--------|-------|
+| i | before | after |
+|---|--------|-------|
+| 3 | x1     | x2    |
+| 2 | x2     | x3    |
+| 1 | x3     | x1    |
+|---|--------|-------|
+
+|---|--------|-------|
+| i | before | after |
+|---|--------|-------|
+| 6 | x1h    | x2h   |
+| 5 | x1l    | x2l   |
+| 4 | x2h    | x3h   |
+| 3 | x2l    | x3l   |
+| 2 | x3h    | x1h   |
+| 1 | x3l    | x1l   |
+|---|--------|-------|
+

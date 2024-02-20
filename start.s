@@ -9,8 +9,8 @@ psp:    .byte ?
 wjmp:   .byte ?
 w:      .addr ?
 ip:     .addr ?
-pstack: .fill (PSTACK_SIZE * 2)
-
+pstk:   .fill (PSTACK_SIZE * 2)
+mac:    .fill 4
     * = $200
 
 start:
@@ -18,7 +18,7 @@ start:
     lda #$6c               ; jmp (a) opcode
     sta wjmp               ; Now we can do 'jmp wjmp' to get 'jmp (w)'
     ;; Init parameter stack
-    lda #w + (PSTACK_SIZE << 1) - 1
+    lda #(PSTACK_SIZE << 1) - 1
     sta psp
     ;; Init return stack
     ldx #$ff

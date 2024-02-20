@@ -31,10 +31,6 @@ NEXT .macro
     jmp do_next
     .endmacro
 
-DPUSH .macro reg
-    movl \reg, -(PSP)
-    .endmacro
-
 banner_str: .text "Holdfire 0.0"
 banner_len: .word (* - banner_str)
 
@@ -50,8 +46,38 @@ w_word_space    .HIGH_W 10, "word_space", w_var
 w_core_dict    .HIGH_W 9, "core_dict", w_const
     .addr dict_head
 
-here_store:
+here_store
     .addr   0
+
+push1
+    ldx psp
+    dex
+    dex
+    stx psp
+    rts
+
+pop1
+    ldx psp
+    inx
+    inx
+    stx psp
+    rts
+
+push2
+    php
+    lda psp
+    sec
+    sbc #4
+    sta psp
+    plp
+    rts
+
+pop2
+    lda psp
+    clc
+    adc #4
+    sta psp
+    rts
 
 w_enter .block
 cfa
@@ -72,27 +98,26 @@ cfa
 
 w_var .block
 cfa
-    clc
+    jsr push1
     lda w
+    clc
     adc #3
-    sta (psp)
-    dec psp
-    adc w+1
-    sta (psp)
-    dec psp
+    sta pstk+1,x
+    lda w+1
+    adc #0
+    sta pstk+2,x
     .NEXT
   .endblock
 
 w_const .block
 cfa
+    jsr push1
     ldy #3
     lda (w),y
-    sta (psp)
-    dec psp
+    sta pstk+1,x
     iny
     lda (w),y
-    sta (psp)
-    dec psp
+    sta pstk+2,x
     .NEXT
   .endblock
 
@@ -100,13 +125,13 @@ END-CODE
 
 ( Low-level Forth engine support )
 CODE lit
-    ldy #1
+    jsr push1
+    ldy #0
     lda (ip),y
-    sta (psp)
-    dec psp
-    lda (ip)
-    sta (psp)
-    dec psp
+    sta pstk+1,x
+    iny
+    lda (ip),y
+    sta pstk+2,x
     clc
     lda ip
     adc #2
@@ -117,18 +142,16 @@ CODE lit
 END-CODE
 
 CODE banner
-    lda #>banner_str
-    sta (psp)
-    dec psp
+    jsr push2
+    tax
     lda #<banner_str
-    sta (psp)
-    dec psp
-    lda #>banner_len
-    sta (psp)
-    dec psp
+    sta pstk+3,x
+    lda #>banner_str
+    sta pstk+4,x
     lda #<banner_len
-    sta (psp)
-    dec psp
+    sta pstk+1,x
+    lda #>banner_len
+    sta pstk+2,x
 END-CODE
 
 CODE exit
@@ -141,7 +164,7 @@ END-CODE
 132 CONSTANT tiblen
 
 CODE p0
-    lda #w + (PSTACK_SIZE << 1) - 1
+    lda #(PSTACK_SIZE << 1) - 1
     sta psp
 END-CODE
 
@@ -166,10 +189,10 @@ END-CODE
 ;
 
 CODE emit
-    inc psp
-    lda (psp)
+    ldx psp
+    lda pstk+1,x
     jsr     usb_tx
-    inc psp
+    jsr pop1
 END-CODE
 
 : type ( c-addr u -- )
@@ -201,12 +224,10 @@ END-CODE
 
 ( -- c )
 CODE key
-    lda #0
-    sta (psp)
-    dec psp
+    jsr push1
+    stz pstk+2,x
     jsr usb_rx
-    sta (psp)
-    dec psp
+    sta pstk+1,x
 END-CODE
 
 CODE unloop
@@ -217,52 +238,45 @@ CODE unloop
 END-CODE
 
 CODE depth
-    lda #0
-    sta (psp)
-    dec psp
     sec
-    lda #w + (PSTACK_SIZE << 1) - 1
+    lda #(PSTACK_SIZE << 1) - 1
     sbc psp
-    lsr a
-    sta (psp)
-    dec psp
+    jsr push1
+    stz pstk+2,x
+    sta pstk+1,x
 END-CODE
 
 CODE pstackptr
-    ldx psp
-    lda #0
-    sta (psp)
-    dec psp
-    txa
-    sta (psp)
-    dec psp
+    clc
+    lda #pstk
+    adc psp
+    jsr push1
+    sta pstk+1,x
+    adc #0
+    sta pstk+2,x
 END-CODE
 
 CODE dup
-    ldy #2
-    lda (psp),y
-    sta (psp)
-    dec psp
-    lda (psp),y
-    sta (psp)
-    dec psp
+    jsr push1
+    lda pstk+3,x
+    sta pstk+1,x
+    lda pstk+4,x
+    sta pstk+2,x
 END-CODE
 
 CODE ?dup
-    ldy #2
-    cmp (psp),y
-    bne +
-    dey
-    cmp (psp),y
-    beq ++
-+  iny
-    lda (psp),y
-    sta (psp)
-    dec psp
-    lda (psp),y
-    sta (psp)
-    dec psp
-+
+    ldx psp
+    lda pstk+1,x
+    bne nonzero
+    lda pstk+2,x
+    beq iszero
+nonzero
+    jsr push1
+    lda pstk+4,x
+    sta pstk+2,x
+    lda pstk+3,x
+    sta pstk+1,x
+iszero
 END-CODE
 
 CODE drop
@@ -271,450 +285,588 @@ CODE drop
 END-CODE
 
 CODE swap
-    inc psp
-    ldy #2
-    lda (psp)
-    tax
-    lda (psp),y
-    sta (psp)
-    txa
-    sta (psp),y
-    inc psp
-    lda (psp)
-    tax
-    lda (psp),y
-    sta (psp)
-    txa
-    sta (psp),y
-    dec psp
-    dec psp
+    ldx psp
+    ldy pstk+1,x
+    lda pstk+3,x
+    sty pstk+3,x
+    sta pstk+1,x
+    ldy pstk+2,x
+    lda pstk+4,x
+    sty pstk+4,x
+    sta pstk+2,x
 END-CODE
 
 CODE over
-    ldy #2
-    lda (psp),y
-    sta (psp)
-    dec psp
-    lda (psp),y
-    sta (psp)
-    dec psp
+    jsr push1
+    lda pstk+5,x
+    sta pstk+1,x
+    lda pstk+6,x
+    sta pstk+2,x
 END-CODE
 
 CODE nip
-    ldy #2
-    inc psp
-    lda (psp)
-    sta (psp),y
-    inc psp
-    lda (psp)
-    sta (psp),y
+    ldx psp
+    lda pstk+1,x
+    sta pstk+3,x
+    lda pstk+2,x
+    sta pstk+4,x
+    jsr pop1
 END-CODE
 
 CODE tuck
-    dec psp
-    ldx #2
--  ldy #2
-    lda (psp),y
-    sta (psp)
+    jsr push1
     ldy #4
-    lda (psp),y
-    ldy #2
-    sta (psp),y
-    ldy #4
-    lda (psp)
-    sta (psp),y
-    inc psp
-    dex
+-
+    lda pstk+3,x
+    sta pstk+1,x
+    inx
+    dey
     bne -
-    dec psp
-    dec psp
-    dec psp
+    ldx psp
+    lda pstk+1,x
+    sta pstk+5,x
+    lda pstk+2,x
+    sta pstk+6,x
 END-CODE
 
 CODE pick
-    inc psp
-    lda (psp)
-    inc a
-    asl a
-    tay
-    lda (psp),y
-    sta (psp)
-    inc psp
-    lda (psp),y
-    sta (psp)
-    dec psp
-    dec psp
+    ldy psp
+    ldx psp
+    lda pstk+1,x
+    asl
+    clc
+    adc psp
+    tax
+    lda pstk+1,x
+    pha
+    lda pstk+2,x
+    tax
+    stx pstk+2,y
+    plx
+    stx pstk+1,y
 END-CODE
 
 CODE 2drop
-    clc
-    lda psp
-    adc #4
-    sta psp
+    jsr pop2
 END-CODE
 
 CODE 2dup
-    dec psp
-    dec psp
-    dec psp
+    jsr push2
     ldy #4
-    ldx #4
--  lda (psp),y
-    sta (psp)
-    inc psp
-    dex
+    ldx psp
+-   lda pstk+5,x
+    sta pstk+1,x
+    inx
+    dey
     bne -
-    sec
-    lda psp
-    sbc #5
-    sta psp
 END-CODE
 
 CODE 2over
-    ;; FIXME
+    jsr push2
+    ldy #4
+    ldx psp
+-   lda pstk+9,x
+    sta pstk+1,x
+    inx
+    dey
+    bne -
 END-CODE
 
 CODE 2swap
-    ;; FIXME
+    ldx psp
+    ldy #4
+-   lda pstk+1,x
+    pha
+    lda pstk+5,x
+    sta pstk+1,x
+    pla
+    sta pstk+5,x
+    inx
+    dey
+    bne -
 END-CODE
 
 CODE rot
-    movl 4(PSP), %d0
-    movl (PSP), 4(PSP)
-    movl TOS, (PSP)
-    movl %d0, TOS
+    ldx psp
+    lda pstk+1,x
+    pha
+    lda pstk+2,x
+    pha
+    lda pstk+5,x
+    sta pstk+1,x
+    lda pstk+6,x
+    sta pstk+2,x
+    lda pstk+3,x
+    sta pstk+5,x
+    lda pstk+4,x
+    sta pstk+6,x
+    pla
+    sta pstk+4,x
+    pla
+    sta pstk+3,x
 END-CODE
 
 CODE and
-    ldx #2
+    ldx psp
     ldy #2
--  inc psp
-    lda (psp)
-    and (psp),y
-    sta (psp),y
-    dex
+-   lda pstk+1,x
+    and pstk+3,x
+    sta pstk+3,x
+    inx
+    dey
     bne -
+    jsr pop1
 END-CODE
 
 CODE or
-    ldx #2
+    ldx psp
     ldy #2
--  inc psp
-    lda (psp)
-    ora (psp),y
-    sta (psp),y
-    dex
+-   lda pstk+1,x
+    and pstk+3,x
+    sta pstk+3,x
+    inx
+    dey
     bne -
+    jsr pop1
 END-CODE
 
 CODE =
-    ldy #2
-
-    inc psp
-    lda (psp)
-    cmp (psp),y
-    bne notequal1
-
-    inc psp
-    lda (psp)
-    cmp (psp),y
-    bne notequal2
+    ldx psp
+    lda pstk+1,x
+    cmp pstk+3,x
+    bne notequal
+    lda pstk+2,x
+    cmp pstk+4,x
+    bne notequal
 
     lda #$ff
-    sta (psp),y
-    dey
-    sta (psp),y
     bra finished
-notequal1
-    inc psp
-notequal2
+notequal
     lda #00
-    sta (psp),y
-    dey
-    sta (psp),y
 finished
+    sta pstk+3,x
+    sta pstk+4,x
+    jsr pop1
 END-CODE
 
 CODE <>
-    ldy #2
-
-    inc psp
-    lda (psp)
-    cmp (psp),y
-    bne notequal1
-
-    inc psp
-    lda (psp)
-    cmp (psp),y
-    bne notequal2
+    ldx psp
+    lda pstk+1,x
+    cmp pstk+3,x
+    bne notequal
+    lda pstk+2,x
+    cmp pstk+4,x
+    bne notequal
 
     lda #00
-    sta (psp),y
-    dey
-    sta (psp),y
     bra finished
-notequal1
-    inc psp
-notequal2
+notequal
     lda #$ff
-    sta (psp),y
-    dey
-    sta (psp),y
 finished
+    sta pstk+3,x
+    sta pstk+4,x
+    jsr pop1
 END-CODE
 
 CODE 0=
-    ldy #2
-    lda (psp),y
-    bne notequal1
-    dey
-    lda (psp),y
-    bne notequal2
+    ldx psp
+    lda pstk+1,x
+    bne nonzero
+    lda pstk+2,x
+    bne nonzero
     lda #$ff
-    sta (psp),y
-    iny
-    sta (psp),y
     bra finished
-notequal1
-    dey
-notequal2
-    lda #00
-    sta (psp),y
-    iny
-    sta (psp),y
+nonzero
+    lda #0
 finished
+    sta pstk+1,x
+    sta pstk+2,x
 END-CODE
 
 CODE invert
-    notl  TOS
+    ldx psp
+    lda pstk+1,x
+    eor #$ff
+    sta pstk+1,x
+    lda pstk+2,x
+    eor #$ff
+    sta pstk+2,x
 END-CODE
 
 CODE 0<
-    cmpil #0, TOS
-    slt   TOS
-    extbl TOS
+    ldx psp
+    lda pstk+2,x
+    bmi set_true
+set_false
+    lda #0
+    bra save_flag
+set_true
+    lda #$ff
+save_flag
+    sta pstk+1,x
+    sta pstk+2,x
 END-CODE
 
 CODE 0>
-    cmpil #0, TOS
-    sgt   TOS
-    extbl TOS
+    ldx psp
+    lda pstk+2,x
+    bmi set_false
+    bne set_true
+    lda pstk+1,x
+    cmp #0
+    bne set_true
+set_false
+    lda #0
+    bra save_flag
+set_true
+    lda #$ff
+save_flag
+    sta pstk+1,x
+    sta pstk+2,x
 END-CODE
 
 CODE <
-    cmpl (PSP)+, TOS
-    sgt  TOS
-    extbl TOS
+    ldx psp
+    sec
+    lda pstk+3,x
+    sbc pstk+1,x
+    lda pstk+4,x
+    sbc pstk+2,x
+    bmi set_true
+    lda #0
+    bra set_flag
+set_true
+    lda #$ff
+set_flag
+    sta pstk+3,x
+    sta pstk+4,x
+    jsr pop1
 END-CODE
 
 CODE >
-    cmpl (PSP)+, TOS
-    slt  TOS
-    extbl TOS
+    ldx psp
+    sec
+    lda pstk+1,x
+    sbc pstk+3,x
+    lda pstk+2,x
+    sbc pstk+4,x
+    bmi set_true
+    lda #0
+    bra set_flag
+set_true
+    lda #$ff
+set_flag
+    sta pstk+3,x
+    sta pstk+4,x
+    jsr pop1
 END-CODE
 
-CODE >=
-    cmpl (PSP)+, TOS
-    sle  TOS
-    extbl TOS
-END-CODE
+: >=
+  < invert
+;
 
-CODE <=
-    cmpl (PSP)+, TOS
-    sge  TOS
-    extbl TOS
-END-CODE
+: <=
+  > invert
+;
 
 CODE +
-    movl  (PSP)+, %d0
-    addl  %d0, TOS
+    ldx psp
+    clc
+    lda pstk+3,x
+    adc pstk+1,x
+    sta pstk+3,x
+    lda pstk+4,x
+    adc pstk+2,x
+    sta pstk+4,x
+    jsr pop1
 END-CODE
 
 CODE -
-    movl  (PSP)+, %d0
-    subl  TOS, %d0
-    movl  %d0, TOS
+    ldx psp
+    sec
+    lda pstk+3,x
+    sbc pstk+1,x
+    sta pstk+3,x
+    lda pstk+4,x
+    sbc pstk+2,x
+    sta pstk+4,x
+    jsr pop1
 END-CODE
 
 CODE 1+
-    addql #1, TOS
+    ldx psp
+    clc
+    inc pstk+1,x
+    bcc +
+    inc pstk+2,x
++
 END-CODE
 
 CODE 1-
-    subql #1, TOS
+    ldx psp
+    sec
+    lda pstk+1,x
+    sbc #1
+    sta pstk+1,x
+    lda pstk+2,x
+    sbc #0
+    sta pstk+2,x
 END-CODE
 
 CODE *
-    movl (PSP)+, %d0
-    mulul %d0, TOS
+    ldx psp
+    lda pstk+3,x
+    stz pstk+3
+    sta mac
+    lda pstk+4,x
+    stz pstk+4
+    sta mac+1
+    ldy #16
+again
+    ;; Shift multiplier 1 bit right and check for carry
+    lda pstk+2,x
+    lsr
+    sta pstk+2,x
+    lda pstk+1,x
+    ror
+    sta pstk+1,x
+    bcc skip_add
+    ;; Carry set. Add multiplicant to accumulator
+    clc
+    lda mac
+    adc pstk+3,x
+    sta pstk+3,x
+    lda mac+1
+    adc pstk+4,x
+    sta pstk+4,x
+skip_add
+    lda mac
+    asl
+    sta mac
+    lda mac+1
+    rol
+    sta mac+1
+    dey
+    bne again
+    jsr pop1
 END-CODE
 
 CODE /
-    movl (PSP)+, %d0
-    divul TOS, %d0
-    movl %d0, TOS
+    ;; fixme
 END-CODE
 
 CODE mod
-    movl (PSP)+, %d0
-    remul TOS, %d1:%d0
-    movl %d1, TOS
+    ;; fixme
 END-CODE
 
 CODE /mod
-    movl (PSP), %d0  | n1
-    movl %d0, %d1    | n1
-    movl TOS, %d2    | n2
-    divsl TOS, %d0   | %d0 = n1 / n2
-    movl %d0, TOS    | TOS = n4 (n1 / n2)
-    remsl %d2, %d3:%d1
-    movl %d3, (PSP)
+    ;; fixme
 END-CODE
 
 CODE 2@
-    movl  TOS, TA0
-    movl  (4,TA0), -(PSP)
-    movl  (TA0), TOS
+    ldx psp
+    lda pstk+1,x
+    sta mac
+    lda pstk+2,x
+    sta mac+1
+    jsr push1
+    ldy #3
+    lda (mac),y
+    sta pstk+4,x
+    dey
+    lda (mac),y
+    sta pstk+3,x
+    dey
+    lda (mac),y
+    sta pstk+2,x
+    dey
+    lda (mac),y
+    sta pstk+1,x
 END-CODE
 
 CODE @
-    movl  TOS, TA0
-    movl  (TA0), TOS
+    ldx psp
+    lda pstk+1,x
+    sta mac
+    lda pstk+2,x
+    sta mac+1
+    ldy #1
+    lda (mac)
+    sta pstk+1,x
+    lda (mac),y
+    sta pstk+2,x
 END-CODE
 
 CODE c@
-    movl  TOS, TA0
-    movb  (TA0), TOS
-    andil #0xff, TOS
+    ldx psp
+    lda (pstk+1,x)
+    sta pstk+1,x
+    stz pstk+2,x
 END-CODE
 
 CODE 2!
-    movl  TOS, TA0
-    movl  (PSP)+, (TA0)
-    movl  (PSP)+, (4,TA0)
-    movl  (PSP)+, TOS
+    ;; fixme
 END-CODE
 
 CODE !
-    movl  TOS, TA0
-    movl  (PSP)+, (TA0)
-    movl  (PSP)+, TOS
+    ldx psp
+    ;; fixme
 END-CODE
 
 CODE +!
-    movl  TOS, TA0
-    movl  (PSP)+, %d0
-    movl  (PSP)+, TOS
-    addl  %d0, (TA0)
+    ;; fixme
 END-CODE
 
 CODE c!
-    movl  TOS, TA0
-    movl  (PSP)+, TOS
-    movb  TOS, (TA0)
-    movl  (PSP)+, TOS
+    ldx psp
+    lda pstk+1,x
+    sta (pstk+3,x)
+    jsr pop2
 END-CODE
 
 CODE branch
-    movl  (IP), IP
+    ldy #1
+    lda (ip)
+    tax
+    lda (ip),y
+    sta ip+1
+    stx ip
 END-CODE
 
 CODE qbranch
-    movl  (IP)+, TA0
-    movl  TOS, %d0
-    movl  (PSP)+, TOS
-    cmpl  #0, %d0
-    bne   1f
-    movl  TA0, IP
-1:
+    ldx psp
+    lda pstk+1,x
+    bne no_branch
+    lda pstk+2,x
+    bne no_branch
+    ldy #1
+    lda (ip)
+    sta mac
+    lda (ip),y
+    sta mac+1
+    lda mac
+    sta ip
+    lda mac+1
+    sta ip+1
+    bra finished
+no_branch
+    clc
+    lda ip
+    adc #2
+    sta ip
+    bcc finished
+    inc ip+1
+finished
+    jsr pop1
 END-CODE
 
 CODE bye
-    movel #0xdeadbead, %d6
-    halt
-END-CODE
-
-CODE ddd
-    movl  TOS, %d5
-    movel #0xdeadbeef, %d6
-    halt
+    jmp start
 END-CODE
 
 CODE >r
-    movl  TOS, -(RSP)
-    movl  (PSP)+, TOS
+    ldx psp
+    lda pstk+2,x
+    pha
+    lda pstk+1,x
+    pha
+    jsr pop1
 END-CODE
 
 CODE r>
-    movl TOS, -(PSP)
-    movl (RSP)+, TOS
+    jsr push1
+    pla
+    sta pstk+1,x
+    pla
+    sta pstk+2,x
 END-CODE
 
 CODE r@
-    movl TOS, -(PSP)
-    movl (RSP), TOS
+    jsr push1
+    pla
+    sta pstk+1,x
+    pla
+    sta pstk+2,x
+    pha
+    lda pstk+1,x
+    pha
 END-CODE
 
 CODE 2>r
-    movl  (PSP)+, -(RSP)
-    movl  TOS, -(RSP)
-    movl  (PSP)+, TOS
+    jsr pop2
+    tax
+    ldy #4
+again
+    lda pstk,x
+    pha
+    dex
+    dey
+    bne again
 END-CODE
 
 CODE 2r>
-    movl  TOS, -(PSP)
-    movl  (RSP)+, TOS
-    movl  (RSP)+, -(PSP)
+    jsr push2
+    tax
+again
+    pla
+    sta pstk+1,x
+    inx
+    dey
+    bne again
 END-CODE
 
 CODE 2rdrop
-    addql #8, RSP
+    pla
+    pla
+    pla
+    pla
 END-CODE
 
 CODE >cf
-    movl  TOS, -(CSP)
-    movl  (PSP)+, TOS
+    ;; fixme
 END-CODE
 
 CODE cf>
-    movl TOS, -(PSP)
-    movl (CSP)+, TOS
+    ;; fixme
 END-CODE
 
 CODE cf@
-    movl TOS, -(PSP)
-    movl (CSP), TOS
+    ;; fixme
 END-CODE
 
 CODE cfnip
-    movl TOS, -(PSP)
-    movl 4(CSP), TOS
-    movl (CSP), 4(CSP)
-    addql #4, CSP
+    ;; fixme
 END-CODE
 
 CODE cftuck
-    movl (CSP), -(CSP)
-    movl TOS, 4(CSP)
-    movl (PSP)+, TOS
+    ;; fixme
 END-CODE
 
 CODE i
-    movl TOS, -(PSP)
-    movl (RSP), TOS
+    jsr push1
+    pla
+    sta pstk+1,x
+    pla
+    sta pstk+2,x
+    pha
+    lda pstk+1,x
+    pha
 END-CODE
 
 CODE j
+    ;; fixme
     movl TOS, -(PSP)
     movl 8(RSP), TOS
 END-CODE
 
 CODE k
+    ;; fixme
     movl TOS, -(PSP)
     movl 16(RSP), TOS
 END-CODE
 
 CODE do_loop
+    ;; fixme
     movl  (IP)+, TA0       | TA0 holds addr of loop head
     movl 4(RSP), %d0
     movl  (RSP), %d1
@@ -729,6 +881,7 @@ CODE do_loop
 END-CODE
 
 CODE do_loop1
+    ;; fixme
     movl  (IP)+, TA0       | TA0 holds addr of loop head
     movl 4(RSP), %d0
     movl  (RSP), %d1
@@ -741,16 +894,19 @@ CODE do_loop1
 END-CODE
 
 CODE here0
+    ;; fixme
     lea _edata, TA0
     movl TA0, here_store
 END-CODE
 
 CODE here
+    ;; fixme
     movl TOS, -(PSP)
     movl (here_store), TOS
 END-CODE
 
 CODE ,
+    ;; fixme
     movl here_store, TA0
     movl TOS, (TA0)+
     movl TA0, here_store
@@ -758,6 +914,7 @@ CODE ,
 END-CODE
 
 CODE c,
+    ;; fixme
     movl here_store, TA0
     movb TOS, (TA0)+
     movl TA0, here_store
@@ -765,6 +922,7 @@ CODE c,
 END-CODE
 
 CODE allot
+    ;; fixme
     movl here_store, TA0
     addl TOS, TA0
     movl TA0, here_store
@@ -772,6 +930,7 @@ CODE allot
 END-CODE
 
 CODE cells
+    ;; fixme
     lsll #2, TOS
 END-CODE
 
@@ -779,10 +938,11 @@ CODE chars
 END-CODE
 
 CODE halt
-    halt
+    ;; fixme
 END-CODE
 
 CODE execute
+    ;; fixme
     movl TOS, W
     DPOP TOS
     movl (W), TA0
@@ -790,6 +950,7 @@ CODE execute
 END-CODE
 
 CODE move
+    ;; fixme
     movl (PSP)+, TA0
     movl (PSP)+, TA1
 1:  cmpl #0, TOS
