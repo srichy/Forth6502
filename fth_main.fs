@@ -49,43 +49,44 @@ w_core_dict    .HIGH_W 9, "core_dict", w_const
 here_store
     .addr   0
 
-push1
-    ldx psp
+rpush1
+    ldx rsp
     dex
     dex
-    stx psp
+    stx rsp
     rts
 
-pop1
-    ldx psp
+rpop1
+    ldx rsp
     inx
     inx
-    stx psp
+    stx rsp
     rts
 
-push2
+rpush2
     php
-    lda psp
+    lda rsp
     sec
     sbc #4
-    sta psp
+    sta rsp
     plp
     rts
 
-pop2
-    lda psp
+rpop2
+    lda rsp
     clc
     adc #4
-    sta psp
+    sta rsp
     rts
 
 w_enter .block
 cfa
     ;jsr    debug_dump
-    lda ip+1
-    pha
+    jsr rpush1
     lda ip
-    pha
+    sta rstk+1,x
+    lda ip+1
+    sta rstk+2,x
     clc
     lda w
     adc #3
@@ -98,26 +99,26 @@ cfa
 
 w_var .block
 cfa
-    jsr push1
     lda w
     clc
     adc #3
-    sta pstk+1,x
+    tax
     lda w+1
     adc #0
-    sta pstk+2,x
+    pha
+    txa
+    pha
     .NEXT
   .endblock
 
 w_const .block
 cfa
-    jsr push1
-    ldy #3
+    ldy #4
     lda (w),y
-    sta pstk+1,x
-    iny
+    pha
+    dey
     lda (w),y
-    sta pstk+2,x
+    pha
     .NEXT
   .endblock
 
@@ -125,13 +126,12 @@ END-CODE
 
 ( Low-level Forth engine support )
 CODE lit
-    jsr push1
-    ldy #0
+    ldy #1
     lda (ip),y
-    sta pstk+1,x
-    iny
+    pha
+    dey
     lda (ip),y
-    sta pstk+2,x
+    pha
     clc
     lda ip
     adc #2
@@ -142,35 +142,35 @@ CODE lit
 END-CODE
 
 CODE banner
-    jsr push2
-    tax
-    lda #<banner_str
-    sta pstk+3,x
     lda #>banner_str
-    sta pstk+4,x
-    lda #<banner_len
-    sta pstk+1,x
+    pha
+    lda #<banner_str
+    pha
     lda #>banner_len
-    sta pstk+2,x
+    pha
+    lda #<banner_len
+    pha
 END-CODE
 
 CODE exit
-    pla
+    ldx rsp
+    lda rstk+1,x
     sta ip
-    pla
+    lda rstk+2,x
     sta ip+1
+    jsr rpop1
 END-CODE
 
 132 CONSTANT tiblen
 
 CODE p0
-    lda #(PSTACK_SIZE << 1) - 1
-    sta psp
+    ldx #$ff
+    txs
 END-CODE
 
 CODE r0
-    ldx #$ff
-    txs
+    lda #(STACK_SIZE << 1) - 1
+    sta rsp
 END-CODE
 
 ( Brute-force until pictured numeric support added )
@@ -189,10 +189,9 @@ END-CODE
 ;
 
 CODE emit
-    ldx psp
-    lda pstk+1,x
+    pla
     jsr     usb_tx
-    jsr pop1
+    pla
 END-CODE
 
 : type ( c-addr u -- )
@@ -224,238 +223,254 @@ END-CODE
 
 ( -- c )
 CODE key
-    jsr push1
-    stz pstk+2,x
+    lda #0
+    pha
     jsr usb_rx
-    sta pstk+1,x
+    pha
 END-CODE
 
 CODE unloop
-    pla
-    pla
-    pla
-    pla
+    jsr rpop2
 END-CODE
 
 CODE depth
-    sec
-    lda #(PSTACK_SIZE << 1) - 1
-    sbc psp
-    jsr push1
-    stz pstk+2,x
-    sta pstk+1,x
+    tsx
+    lda #0
+    pha
+    txa
+    eor #$ff                    ; one's comp because zero stack == #$ff
+    lsr                         ; now div by two since cells are two bytes
+    pha
 END-CODE
 
 CODE pstackptr
-    clc
-    lda #pstk
-    adc psp
-    jsr push1
-    sta pstk+1,x
-    adc #0
-    sta pstk+2,x
+    lda #1
+    pha
+    tsx
+    inx                         ; this should be the actual address, not 1-
+    phx
 END-CODE
 
 CODE dup
-    jsr push1
-    lda pstk+3,x
-    sta pstk+1,x
-    lda pstk+4,x
-    sta pstk+2,x
+    pla
+    tax
+    pla
+    tay
+    pha
+    txa
+    pha
+    tya
+    pha
+    txa
+    pha
 END-CODE
 
 CODE ?dup
-    ldx psp
-    lda pstk+1,x
-    bne nonzero
-    lda pstk+2,x
-    beq iszero
-nonzero
-    jsr push1
-    lda pstk+4,x
-    sta pstk+2,x
-    lda pstk+3,x
-    sta pstk+1,x
+    pla
+    bne nonzero1
+    pla
+    bne nonzero2
+    bra iszero
+nonzero1
+    pla
+nonzero2
+    jmp w_dup.cfa
 iszero
 END-CODE
 
 CODE drop
-    inc psp
-    inc psp
+    pla
+    pla
 END-CODE
 
 CODE swap
-    ldx psp
-    ldy pstk+1,x
-    lda pstk+3,x
-    sty pstk+3,x
-    sta pstk+1,x
-    ldy pstk+2,x
-    lda pstk+4,x
-    sty pstk+4,x
-    sta pstk+2,x
+    pla
+    sta mac
+    pla
+    sta mac+1
+    pla
+    tax
+    pla
+    tay
+    lda mac+1
+    pha
+    lda mac
+    pha
+    tya
+    pha
+    txa
+    pha
 END-CODE
 
 CODE over
-    jsr push1
-    lda pstk+5,x
-    sta pstk+1,x
-    lda pstk+6,x
-    sta pstk+2,x
+    tsx
+    lda $104,x
+    pha
+    lda $103,x
+    pha
 END-CODE
 
 CODE nip
-    ldx psp
-    lda pstk+1,x
-    sta pstk+3,x
-    lda pstk+2,x
-    sta pstk+4,x
-    jsr pop1
+    tsx
+    pla
+    tay
+    pla
+    sta $103,x
+    tya
+    sta $104,x
 END-CODE
 
 CODE tuck
-    jsr push1
+    pha
+    pha
+    tsx
     ldy #4
 -
-    lda pstk+3,x
-    sta pstk+1,x
+    lda $103,x
+    sta $101,x
     inx
     dey
     bne -
-    ldx psp
-    lda pstk+1,x
-    sta pstk+5,x
-    lda pstk+2,x
-    sta pstk+6,x
+    tsx                         ; Avoiding z-page crossing
+    lda $101,x
+    sta $105,x
+    lda $102,x
+    sta $106,x
 END-CODE
 
 CODE pick
-    ldy psp
-    ldx psp
-    lda pstk+1,x
+    pla
     asl
-    clc
-    adc psp
-    tax
-    lda pstk+1,x
     pha
-    lda pstk+2,x
-    tax
-    stx pstk+2,y
-    plx
-    stx pstk+1,y
+    tsx
+    txa
+    clc
+    adc $101,x
+    tay
+    lda $103,y
+    sta $101,x
+    lda $104,y
+    sta $102,x
 END-CODE
 
 CODE 2drop
-    jsr pop2
+    pla
+    pla
+    pla
+    pla
 END-CODE
 
 CODE 2dup
-    jsr push2
+    pha
+    pha
+    pha
+    pha
+    tsx
     ldy #4
-    ldx psp
--   lda pstk+5,x
-    sta pstk+1,x
+-   lda $101,x
+    sta $105,x
     inx
     dey
     bne -
 END-CODE
 
 CODE 2over
-    jsr push2
+    pha
+    pha
+    pha
+    pha
+    tsx
     ldy #4
-    ldx psp
--   lda pstk+9,x
-    sta pstk+1,x
+-   lda $109,x
+    sta $101,x
     inx
     dey
     bne -
 END-CODE
 
 CODE 2swap
-    ldx psp
+    tsx
     ldy #4
--   lda pstk+1,x
-    pha
-    lda pstk+5,x
-    sta pstk+1,x
-    pla
-    sta pstk+5,x
+-   lda $101,x
+    sta mac
+    lda $105,x
+    sta $101,x
+    lda mac
+    sta $105,x
     inx
     dey
     bne -
 END-CODE
 
 CODE rot
-    ldx psp
-    lda pstk+1,x
-    pha
-    lda pstk+2,x
-    pha
-    lda pstk+5,x
-    sta pstk+1,x
-    lda pstk+6,x
-    sta pstk+2,x
-    lda pstk+3,x
-    sta pstk+5,x
-    lda pstk+4,x
-    sta pstk+6,x
-    pla
-    sta pstk+4,x
-    pla
-    sta pstk+3,x
+    tsx
+    lda $101,x
+    sta mac
+    lda $102,x
+    sta mac+1
+    lda $105,x
+    sta $101,x
+    lda $106,x
+    sta $102,x
+    lda $103,x
+    sta $105,x
+    lda $104,x
+    sta $106,x
+    lda mac+1
+    sta $104,x
+    lda mac
+    sta $103,x
 END-CODE
 
 CODE and
-    ldx psp
-    ldy #2
--   lda pstk+1,x
-    and pstk+3,x
-    sta pstk+3,x
-    inx
-    dey
-    bne -
-    jsr pop1
+    tsx
+    lda $101,x
+    and $103,x
+    sta $103,x
+    lda $102,x
+    and $104,x
+    sta $104,x
+    pla
+    pla
 END-CODE
 
 CODE or
-    ldx psp
-    ldy #2
--   lda pstk+1,x
-    and pstk+3,x
-    sta pstk+3,x
-    inx
-    dey
-    bne -
+    tsx
+    lda $101,x
+    and $103,x
+    sta $103,x
+    lda $102,x
+    and $104,x
+    sta $104,x
     jsr pop1
 END-CODE
 
 CODE =
-    ldx psp
-    lda pstk+1,x
-    cmp pstk+3,x
+    tsx
+    lda $101,x
+    cmp $103,x
     bne notequal
-    lda pstk+2,x
-    cmp pstk+4,x
+    lda $102,x
+    cmp $104,x
     bne notequal
-
     lda #$ff
     bra finished
 notequal
     lda #00
 finished
-    sta pstk+3,x
-    sta pstk+4,x
-    jsr pop1
+    sta $103,x
+    sta $104,x
+    pla
+    pla
 END-CODE
 
 CODE <>
-    ldx psp
-    lda pstk+1,x
-    cmp pstk+3,x
+    tsx
+    lda $101,x
+    cmp $103,x
     bne notequal
-    lda pstk+2,x
-    cmp pstk+4,x
+    lda $102,x
+    cmp $104,x
     bne notequal
 
     lda #00
@@ -463,56 +478,56 @@ CODE <>
 notequal
     lda #$ff
 finished
-    sta pstk+3,x
-    sta pstk+4,x
-    jsr pop1
+    sta $103,x
+    sta $104,x
+    pla
+    pla
 END-CODE
 
 CODE 0=
-    ldx psp
-    lda pstk+1,x
+    tsx
+    lda $101,x
     bne nonzero
-    lda pstk+2,x
+    lda $102,x
     bne nonzero
     lda #$ff
     bra finished
 nonzero
     lda #0
 finished
-    sta pstk+1,x
-    sta pstk+2,x
+    sta $101,x
+    sta $102,x
 END-CODE
 
 CODE invert
-    ldx psp
-    lda pstk+1,x
+    tsx
+    lda $101,x
     eor #$ff
-    sta pstk+1,x
-    lda pstk+2,x
+    sta $101,x
+    lda $102,x
     eor #$ff
-    sta pstk+2,x
+    sta $102,x
 END-CODE
 
 CODE 0<
-    ldx psp
-    lda pstk+2,x
+    tsx
+    lda $102,x
     bmi set_true
-set_false
     lda #0
     bra save_flag
 set_true
     lda #$ff
 save_flag
-    sta pstk+1,x
-    sta pstk+2,x
+    sta $101,x
+    sta $102,x
 END-CODE
 
 CODE 0>
-    ldx psp
-    lda pstk+2,x
+    tsx
+    lda $102,x
     bmi set_false
     bne set_true
-    lda pstk+1,x
+    lda $101,x
     cmp #0
     bne set_true
 set_false
@@ -521,44 +536,46 @@ set_false
 set_true
     lda #$ff
 save_flag
-    sta pstk+1,x
-    sta pstk+2,x
+    sta $101,x
+    sta $102,x
 END-CODE
 
 CODE <
-    ldx psp
+    tsx
     sec
-    lda pstk+3,x
-    sbc pstk+1,x
-    lda pstk+4,x
-    sbc pstk+2,x
+    lda $103,x
+    sbc $101,x
+    lda $104,x
+    sbc $102,x
     bmi set_true
     lda #0
     bra set_flag
 set_true
     lda #$ff
 set_flag
-    sta pstk+3,x
-    sta pstk+4,x
-    jsr pop1
+    sta $103,x
+    sta $104,x
+    pla
+    pla
 END-CODE
 
 CODE >
-    ldx psp
+    tsx
     sec
-    lda pstk+1,x
-    sbc pstk+3,x
-    lda pstk+2,x
-    sbc pstk+4,x
+    lda $101,x
+    sbc $103,x
+    lda $102,x
+    sbc $104,x
     bmi set_true
     lda #0
     bra set_flag
 set_true
     lda #$ff
 set_flag
-    sta pstk+3,x
-    sta pstk+4,x
-    jsr pop1
+    sta $103,x
+    sta $104,x
+    pla
+    pla
 END-CODE
 
 : >=
@@ -570,75 +587,77 @@ END-CODE
 ;
 
 CODE +
-    ldx psp
+    tsx
     clc
-    lda pstk+3,x
-    adc pstk+1,x
-    sta pstk+3,x
-    lda pstk+4,x
-    adc pstk+2,x
-    sta pstk+4,x
-    jsr pop1
+    lda $103,x
+    adc $101,x
+    sta $103,x
+    lda $104,x
+    adc $102,x
+    sta $104,x
+    pla
+    pla
 END-CODE
 
 CODE -
-    ldx psp
+    tsx
     sec
-    lda pstk+3,x
-    sbc pstk+1,x
-    sta pstk+3,x
-    lda pstk+4,x
-    sbc pstk+2,x
-    sta pstk+4,x
-    jsr pop1
+    lda $103,x
+    sbc $101,x
+    sta $103,x
+    lda $104,x
+    sbc $102,x
+    sta $104,x
+    pla
+    pla
 END-CODE
 
 CODE 1+
-    ldx psp
+    tsx
     clc
-    inc pstk+1,x
-    bcc +
-    inc pstk+2,x
+    inc $101,x
+    bne +
+    inc $102,x
 +
 END-CODE
 
 CODE 1-
-    ldx psp
+    tsx
     sec
-    lda pstk+1,x
+    lda $101,x
     sbc #1
-    sta pstk+1,x
-    lda pstk+2,x
+    sta $101,x
+    lda $102,x
     sbc #0
-    sta pstk+2,x
+    sta $102,x
 END-CODE
 
 CODE *
-    ldx psp
-    lda pstk+3,x
-    stz pstk+3
+    tsx
+    lda $103,x
+    stz $103
     sta mac
-    lda pstk+4,x
-    stz pstk+4
+    lda $104,x
+    stz $104
     sta mac+1
     ldy #16
 again
     ;; Shift multiplier 1 bit right and check for carry
-    lda pstk+2,x
+    lda $102,x
     lsr
-    sta pstk+2,x
-    lda pstk+1,x
+    sta $102,x
+    lda $101,x
     ror
-    sta pstk+1,x
+    sta $101,x
     bcc skip_add
     ;; Carry set. Add multiplicant to accumulator
     clc
     lda mac
-    adc pstk+3,x
-    sta pstk+3,x
+    adc $103,x
+    sta $103,x
     lda mac+1
-    adc pstk+4,x
-    sta pstk+4,x
+    adc $104,x
+    sta $104,x
 skip_add
     lda mac
     asl
@@ -648,80 +667,101 @@ skip_add
     sta mac+1
     dey
     bne again
-    jsr pop1
+    pla
+    pla
 END-CODE
 
-CODE /
-    ;; fixme
-END-CODE
+: /
+    /mod nip
+;
 
-CODE mod
-    ;; fixme
-END-CODE
+: mod
+    /mod drop
+;
 
 CODE /mod
     ;; fixme
 END-CODE
 
 CODE 2@
-    ldx psp
-    lda pstk+1,x
+    pla
     sta mac
-    lda pstk+2,x
+    pla
     sta mac+1
-    jsr push1
     ldy #3
-    lda (mac),y
-    sta pstk+4,x
+-   lda (mac),y
+    pha
     dey
-    lda (mac),y
-    sta pstk+3,x
-    dey
-    lda (mac),y
-    sta pstk+2,x
-    dey
-    lda (mac),y
-    sta pstk+1,x
+    bpl -
 END-CODE
 
 CODE @
-    ldx psp
-    lda pstk+1,x
+    pla
     sta mac
-    lda pstk+2,x
+    pla
     sta mac+1
     ldy #1
-    lda (mac)
-    sta pstk+1,x
     lda (mac),y
-    sta pstk+2,x
+    pha
+    lda (mac)
+    pha
 END-CODE
 
 CODE c@
-    ldx psp
-    lda (pstk+1,x)
-    sta pstk+1,x
-    stz pstk+2,x
+    tsx
+    lda ($101,x)
+    sta $101,x
+    stz $102,x
 END-CODE
 
 CODE 2!
-    ;; fixme
+    pla
+    sta mac
+    pla
+    sta mac+1
+    ldy #0
+-   pla
+    sta (mac),y
+    iny
+    cpy #4
+    bne -
 END-CODE
 
 CODE !
-    ldx psp
-    ;; fixme
+    pla
+    sta mac
+    pla
+    sta mac+1
+    pla
+    sta (mac)
+    pla
+    ldy #1
+    sta (mac),y
 END-CODE
 
 CODE +!
-    ;; fixme
+    pla
+    sta mac
+    pla
+    sta mac+1
+    ldy #1
+    clc
+    pla
+    adc (mac)
+    sta (mac)
+    pla
+    adc (mac),y
+    sta (mac),y
 END-CODE
 
 CODE c!
-    ldx psp
-    lda pstk+1,x
-    sta (pstk+3,x)
-    jsr pop2
+    pla
+    sta mac
+    pla
+    sta mac+1
+    pla
+    sta (mac)
+    pla
 END-CODE
 
 CODE branch
@@ -734,22 +774,20 @@ CODE branch
 END-CODE
 
 CODE qbranch
-    ldx psp
-    lda pstk+1,x
-    bne no_branch
-    lda pstk+2,x
-    bne no_branch
+    pla
+    bne no_branch1
+    pla
+    bne no_branch2
     ldy #1
     lda (ip)
-    sta mac
+    tax
     lda (ip),y
-    sta mac+1
-    lda mac
-    sta ip
-    lda mac+1
     sta ip+1
+    stx ip
     bra finished
-no_branch
+no_branch1
+    pla
+no_branch2
     clc
     lda ip
     adc #2
@@ -757,7 +795,6 @@ no_branch
     bcc finished
     inc ip+1
 finished
-    jsr pop1
 END-CODE
 
 CODE bye
@@ -765,61 +802,56 @@ CODE bye
 END-CODE
 
 CODE >r
-    ldx psp
-    lda pstk+2,x
-    pha
-    lda pstk+1,x
-    pha
-    jsr pop1
+    jsr rpush1
+    pla
+    sta rstk+1,x
+    pla
+    lda rstk+2,x
 END-CODE
 
 CODE r>
-    jsr push1
-    pla
-    sta pstk+1,x
-    pla
-    sta pstk+2,x
+    ldx rsp
+    lda rstk+2,x
+    pha
+    lda rstk+1,x
+    pha
+    jsr rpop1
 END-CODE
 
 CODE r@
-    jsr push1
-    pla
-    sta pstk+1,x
-    pla
-    sta pstk+2,x
+    ldx rsp
+    lda rstk+2,x
     pha
-    lda pstk+1,x
+    lda rstk+1,x
     pha
 END-CODE
 
 CODE 2>r
-    jsr pop2
+    jsr rpush2
     tax
     ldy #4
 again
-    lda pstk,x
+    pla
+    sta rstk+1,x
+    inx
+    dey
+    bne again
+END-CODE
+
+CODE 2r>
+    jsr rpop2
+    tax
+    ldy #4
+again
+    lda $101,x
     pha
     dex
     dey
     bne again
 END-CODE
 
-CODE 2r>
-    jsr push2
-    tax
-again
-    pla
-    sta pstk+1,x
-    inx
-    dey
-    bne again
-END-CODE
-
 CODE 2rdrop
-    pla
-    pla
-    pla
-    pla
+    jsr rpop2
 END-CODE
 
 CODE >cf
@@ -843,26 +875,27 @@ CODE cftuck
 END-CODE
 
 CODE i
-    jsr push1
-    pla
-    sta pstk+1,x
-    pla
-    sta pstk+2,x
+    ldx rsp
+    lda pstk+2,x
     pha
     lda pstk+1,x
     pha
 END-CODE
 
 CODE j
-    ;; fixme
-    movl TOS, -(PSP)
-    movl 8(RSP), TOS
+    ldx rsp
+    lda pstk+6,x
+    pha
+    lda pstk+5,x
+    pha
 END-CODE
 
 CODE k
-    ;; fixme
-    movl TOS, -(PSP)
-    movl 16(RSP), TOS
+    ldx rsp
+    lda pstk+10,x
+    pha
+    lda pstk+9,x
+    pha
 END-CODE
 
 CODE do_loop
@@ -930,35 +963,55 @@ CODE allot
 END-CODE
 
 CODE cells
-    ;; fixme
-    lsll #2, TOS
+    tsx
+    lda $101,x
+    asl
+    sta $101,x
+    lda $102,x
+    rol
+    sta $102,x
 END-CODE
 
 CODE chars
+    ;; nop
 END-CODE
 
 CODE halt
-    ;; fixme
+    stp
 END-CODE
 
 CODE execute
-    ;; fixme
-    movl TOS, W
-    DPOP TOS
-    movl (W), TA0
-    jmp (TA0)
+    pla
+    sta w
+    pla
+    sta w+1
+    jmp wjmp
 END-CODE
 
 CODE move
-    ;; fixme
-    movl (PSP)+, TA0
-    movl (PSP)+, TA1
-1:  cmpl #0, TOS
-    beq  3f
-2:  movb (TA1)+, (TA0)+
-    subql #1, TOS
-    bne   2b
-3:  movl (PSP)+, TOS
+    tsx
+    ;; $101,2 = u, $103,4 = a2, $105,6 = a1
+-   sec
+    lda $101,x
+    sbc #1
+    lda $102,x
+    sbc #0
+    bmi finished
+    lda ($105,x)
+    sta ($103,x)
+    inc ($105,x)
+    bne incdest
+    inc ($106,x)
+incdest
+    inc ($103,x)
+    bne -
+    inc ($104,x)
+    bra -
+finished
+-   ldy #6
+    pla
+    dey
+    bne -
 END-CODE
 
 : is_eol ( c -- n )

@@ -1,15 +1,15 @@
     .cpu "65c02"
     .include "wdc65c816sxb.inc"
 
-    PSTACK_SIZE = 48
+    STACK_SIZE = 48
 
     ;; Set up symbols for the zero elements
     * = $24
-psp:    .byte ?
+rsp:    .byte ?
 wjmp:   .byte ?
 w:      .addr ?
 ip:     .addr ?
-pstk:   .fill (PSTACK_SIZE * 2)
+rstk:   .fill (STACK_SIZE * 2)
 mac:    .fill 4
     * = $200
 
@@ -18,8 +18,8 @@ start:
     lda #$6c               ; jmp (a) opcode
     sta wjmp               ; Now we can do 'jmp wjmp' to get 'jmp (w)'
     ;; Init parameter stack
-    lda #(PSTACK_SIZE << 1) - 1
-    sta psp
+    lda #(STACK_SIZE << 1) - 1
+    sta rsp
     ;; Init return stack
     ldx #$ff
     txs

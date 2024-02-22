@@ -14,15 +14,19 @@ First attempt will be an ITC (Indirect-Threaded Code) Forth model
 
 #### Parameter Stack
   - First attempt will be a 32- or 48- depth zero-page stack
+  - Switching to using system stack
 
 #### Return Stack
   - This will be the normal stack
+  - Switching to using a z-page stack
 
 #### PSP (Parameter Stack Pointer)
   - Zero-page byte
+  - Will be just _the_ stack pointer
 
 #### RSP (Return Stack Pointer)
   - Should just _the_ stack pointer
+  - Switching to a z-page
 
 #### Control-flow Stack?
   - TBD
