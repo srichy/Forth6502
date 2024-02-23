@@ -10,7 +10,8 @@ wjmp:   .byte ?
 w:      .addr ?
 ip:     .addr ?
 rstk:   .fill (STACK_SIZE * 2)
-mac:    .fill 4
+mac:    .fill 6
+here_store: .addr ?
     * = $200
 
 start:
@@ -108,3 +109,5 @@ usb_rx:
     rts
 
     .include "fth_main.s"
+
+edata: .addr *

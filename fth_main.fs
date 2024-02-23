@@ -46,8 +46,13 @@ w_word_space    .HIGH_W 10, "word_space", w_var
 w_core_dict    .HIGH_W 9, "core_dict", w_const
     .addr dict_head
 
-here_store
-    .addr   0
+    ;; Byte is in A.  Put at here and advance here
+puthere:
+    sta (here_store)
+    inc here_store
+    bne +
+    inc here_store+1
++   rts
 
 rpush1
     ldx rsp
@@ -124,7 +129,11 @@ cfa
 
 END-CODE
 
-( Low-level Forth engine support )
+CODE init_serial
+    jsr usb_init
+END-CODE
+
+    ( Low-level Forth engine support )
 CODE lit
     ldy #1
     lda (ip),y
@@ -442,7 +451,8 @@ CODE or
     lda $102,x
     and $104,x
     sta $104,x
-    jsr pop1
+    pla
+    pla
 END-CODE
 
 CODE =
@@ -708,10 +718,14 @@ CODE @
 END-CODE
 
 CODE c@
-    tsx
-    lda ($101,x)
-    sta $101,x
-    stz $102,x
+    pla
+    sta mac
+    pla
+    sta mac+1
+    lda #0
+    pha
+    lda (mac)
+    pha
 END-CODE
 
 CODE 2!
@@ -876,90 +890,122 @@ END-CODE
 
 CODE i
     ldx rsp
-    lda pstk+2,x
+    lda rstk+2,x
     pha
-    lda pstk+1,x
+    lda rstk+1,x
     pha
 END-CODE
 
 CODE j
     ldx rsp
-    lda pstk+6,x
+    lda rstk+6,x
     pha
-    lda pstk+5,x
+    lda rstk+5,x
     pha
 END-CODE
 
 CODE k
     ldx rsp
-    lda pstk+10,x
+    lda rstk+10,x
     pha
-    lda pstk+9,x
+    lda rstk+9,x
     pha
 END-CODE
 
+( full loop terminator include dropping loop counters from rstk )
 CODE do_loop
-    ;; fixme
-    movl  (IP)+, TA0       | TA0 holds addr of loop head
-    movl 4(RSP), %d0
-    movl  (RSP), %d1
-    addq.l #1, %d1
-    movl  %d1, (RSP)       | Save incremented loop counter
-    cmpl   %d0, %d1
-    bne  1f                | Loop still active
-    addql  #8, RSP
-    bra  2f
-1:  movl TA0, IP
-2:
+    ldx rsp
+    inc rstk+1,x
+    bne +
+    inc rstk+2,x
++   sec
+    lda rstk+3,x
+    sbc rstk+1,x
+    lda rstk+4,x
+    sbc rstk+2,x
+    bne loop_again
+    jsr rpop2
+    clc
+    lda ip
+    adc #2
+    sta ip
+    bcc +
+    inc ip+1
++   bra finished
+loop_again:
+    ldy #1
+    lda (ip)
+    tsx
+    lda (ip),y
+    sta ip+1
+    stx ip
+finished:   
 END-CODE
 
+( loop terminator that does not clear the rstk )
 CODE do_loop1
-    ;; fixme
-    movl  (IP)+, TA0       | TA0 holds addr of loop head
-    movl 4(RSP), %d0
-    movl  (RSP), %d1
-    addq.l #1, %d1
-    movl  %d1, (RSP)       | Save incremented loop counter
-    cmpl   %d0, %d1
-    beq  1f                | Loop still active
-    movl TA0, IP
-1:
+    ldx rsp
+    inc rstk+1,x
+    bne +
+    inc rstk+2,x
++   sec
+    lda rstk+3,x
+    sbc rstk+1,x
+    lda rstk+4,x
+    sbc rstk+2,x
+    bne loop_again
+    ; jsr rpop2                 ; This is the only difference compared to do_loop (currently)
+    clc
+    lda ip
+    adc #2
+    sta ip
+    bcc +
+    inc ip+1
++   bra finished
+loop_again:
+    ldy #1
+    lda (ip)
+    tsx
+    lda (ip),y
+    sta ip+1
+    stx ip
+finished:   
 END-CODE
 
 CODE here0
-    ;; fixme
-    lea _edata, TA0
-    movl TA0, here_store
+    lda edata
+    sta here_store
+    lda edata+1
+    sta here_store+1
 END-CODE
 
 CODE here
-    ;; fixme
-    movl TOS, -(PSP)
-    movl (here_store), TOS
+    lda here_store+1
+    pha
+    lda here_store
+    pha
 END-CODE
 
 CODE ,
-    ;; fixme
-    movl here_store, TA0
-    movl TOS, (TA0)+
-    movl TA0, here_store
-    movl (PSP)+, TOS
+    pla
+    jsr puthere
+    pla
+    jsr puthere
 END-CODE
 
 CODE c,
-    ;; fixme
-    movl here_store, TA0
-    movb TOS, (TA0)+
-    movl TA0, here_store
-    movl (PSP)+, TOS
+    pla
+    jsr puthere
 END-CODE
 
 CODE allot
-    ;; fixme
-    movl here_store, TA0
-    addl TOS, TA0
-    movl TA0, here_store
-    movl (PSP)+, TOS
+    clc
+    pla
+    adc here_store
+    sta here_store
+    pla
+    adc here_store+1
+    sta here_store+1
 END-CODE
 
 CODE cells
@@ -977,7 +1023,7 @@ CODE chars
 END-CODE
 
 CODE halt
-    stp
+-   bra -
 END-CODE
 
 CODE execute
@@ -989,29 +1035,37 @@ CODE execute
 END-CODE
 
 CODE move
-    tsx
-    ;; $101,2 = u, $103,4 = a2, $105,6 = a1
+    pla
+    sta mac                     ; u
+    pla
+    sta mac+1
+    pla
+    sta mac+2                   ; a2, dest
+    pla
+    sta mac+3
+    pla
+    sta mac+4                   ; a1, source
+    pla
+    sta mac+5
 -   sec
-    lda $101,x
+    lda mac
     sbc #1
-    lda $102,x
+    sta mac
+    lda mac+1
     sbc #0
+    sta mac+1
     bmi finished
-    lda ($105,x)
-    sta ($103,x)
-    inc ($105,x)
+    lda (mac+4)
+    sta (mac+2)
+    inc mac+4
     bne incdest
-    inc ($106,x)
+    inc mac+5
 incdest
-    inc ($103,x)
+    inc mac+2
     bne -
-    inc ($104,x)
+    inc mac+3
     bra -
 finished
--   ldy #6
-    pla
-    dey
-    bne -
 END-CODE
 
 : is_eol ( c -- n )
@@ -1452,7 +1506,7 @@ next_immediate
     here0
     10 base !
     0 >in !
-    cf_init_uart
+    init_serial
     core_dict @ dict_start !
 
     banner type cr

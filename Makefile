@@ -11,7 +11,7 @@ clean:
 	rm -f $(TARGETS) *.o *.map *.lis
 
 wdcForth: $(SRCS)
-	$(AS) $(ASFLAGS) --s-record -o $@ -L $@.lis --map $@.map $<
+	$(AS) $(ASFLAGS) --nostart -o $@ -L $@.lis --map $@.map $<
 
 fth_main.s: fth_main.fs $(RFC)
 	$(RFC) --arch ca6502 fth_main.fs > $@
