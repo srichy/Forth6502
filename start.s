@@ -16,7 +16,7 @@ here_store: .addr ?
 
 start:
     sei
-    lda #$6c               ; jmp (a) opcode
+    lda #$4c               ; jmp a opcode
     sta wjmp               ; Now we can do 'jmp wjmp' to get 'jmp (w)'
     ;; Init parameter stack
     lda #(STACK_SIZE << 1) - 1
@@ -31,16 +31,18 @@ start:
     ;; Load IP with "cold"
     ;; Then fall through to "next"
     lda #<w_cold.cfa
-    sta ip
+    sta w
     lda #>w_cold.cfa
-    sta ip+1
-    ;; fall through to do_next
+    sta w+1
+    jmp wjmp
+    ;; The following should never be reached
+    bra start
 
 do_next:
     ldy #1
     lda (ip)
     sta w
-    jsr set_led                 ; DEBUG blinky activity
+    ;jsr set_led                 ; DEBUG blinky activity
     lda (ip),y
     sta w+1
     clc
