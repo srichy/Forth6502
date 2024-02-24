@@ -31,8 +31,8 @@ NEXT .macro
     jmp do_next
     .endmacro
 
-banner_str: .text "Holdfire 0.0"
-banner_len: .word (* - banner_str)
+banner_str: .text "HOLDFIRE 0.0"
+banner_len: .byte (* - banner_str)
 
 w_tib    .HIGH_W 3, "tib", w_var
     .fill 132
@@ -138,16 +138,15 @@ CODE lit
     ldy #1
     lda (ip),y
     pha
-    dey
-    lda (ip),y
+    lda (ip)
     pha
     clc
     lda ip
     adc #2
     sta ip
-    bcc +
-    inc ip+1
-+
+    lda ip+1
+    adc #0
+    sta ip+1
 END-CODE
 
 CODE banner
@@ -155,9 +154,9 @@ CODE banner
     pha
     lda #<banner_str
     pha
-    lda #>banner_len
+    lda #0
     pha
-    lda #<banner_len
+    lda banner_len
     pha
 END-CODE
 
@@ -178,7 +177,7 @@ CODE p0
 END-CODE
 
 CODE r0
-    lda #(STACK_SIZE << 1) - 1
+    lda #STACK_MEM
     sta rsp
 END-CODE
 
@@ -315,7 +314,7 @@ CODE over
     tsx
     lda $104,x
     pha
-    lda $103,x
+    lda $104,x
     pha
 END-CODE
 
@@ -324,9 +323,9 @@ CODE nip
     pla
     tay
     pla
-    sta $103,x
+    sta $102,x
     tya
-    sta $104,x
+    sta $101,x
 END-CODE
 
 CODE tuck
@@ -914,16 +913,22 @@ END-CODE
 
 ( full loop terminator include dropping loop counters from rstk )
 CODE do_loop
+    ;; Increment loop counter
     ldx rsp
     inc rstk+1,x
     bne +
     inc rstk+2,x
-+   sec
+
+    ;; Compare counter with limit
++    sec
     lda rstk+3,x
     sbc rstk+1,x
+    bne loop_again
     lda rstk+4,x
     sbc rstk+2,x
     bne loop_again
+
+    ;; Loop finished. Remove loop context. Skip backpointer.
     jsr rpop2
     clc
     lda ip
@@ -935,11 +940,11 @@ CODE do_loop
 loop_again:
     ldy #1
     lda (ip)
-    tsx
+    tax
     lda (ip),y
     sta ip+1
     stx ip
-finished:   
+finished:
 END-CODE
 
 ( loop terminator that does not clear the rstk )
@@ -1509,6 +1514,7 @@ next_immediate
     init_serial
     core_dict @ dict_start !
 
+    key drop
     banner type cr
     quit
     depth
