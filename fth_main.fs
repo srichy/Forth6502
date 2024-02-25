@@ -210,8 +210,8 @@ END-CODE
     dup 1+ swap c@
 ;
 
-: cstr_cmp ( c-addr1 c-addr2 -- f )
-    dup c@ rot dup c@ rot over = if
+: cstr_cmp ( c-addr1 dict_start -- f )
+    dup c@ 0x7f and rot dup c@ rot over = if
         0 do
             1+ swap 1+
             dup c@ rot dup c@ rot <> if
@@ -1186,15 +1186,15 @@ VARIABLE dict_start
         ?dup
     while ( c-addr dict_start -- )
             2dup >r >r ( c-addr dict_start -- ) ( R: dict_start c-addr -- )
-            1+ cstr_cmp if
-                r> drop r> dup 20 + swap c@ if
+            cstr_cmp if
+                r> drop r> dup 8 + swap c@ if
                     1
                 else
                     -1
                 then
                 exit
             then
-            r> r> 16 + @
+            r> r> 6 + @
     repeat
     0
 ;
@@ -1493,7 +1493,6 @@ next_immediate
 ;
 
 : hello
-  brk
     s" HELLO, WORLD!"
     type
 ;
