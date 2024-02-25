@@ -34,9 +34,7 @@ here_store: .addr ?
     .endif
 
 start:
-    .if targ=="wdc"
-    sei
-    .endif
+    jsr mach_init0
     lda #$4c               ; jmp a opcode
     sta wjmp               ; Now we can do 'jmp wjmp' to get 'jmp (w)'
     ;; Init parameter stack
@@ -46,11 +44,7 @@ start:
     ldx #$ff
     txs
     ;; Init hardware.  FIXME to make this per-platform
-    .if targ=="wdc"
-    lda #1
-    jsr set_led
-    jsr usb_init
-    .endif
+    jsr mach_init1
     ;; Load IP with "cold"
     ;; Then fall through to "next"
     lda #<w_cold.cfa
@@ -78,98 +72,15 @@ do_next:
     jmp wjmp
 
     .if targ=="wdc"
-set_led:
-    pha                         ; Save selected LED(s)
-    lda #00                     ; DDRA access
-    sta PIA_A_CTRL
-    lda #$ff                    ; All bits as "output"
-    sta PIA_A_DATA
-    lda #04                     ; ORA access
-    sta PIA_A_CTRL
-    pla                         ; Fetch select LED(s)
-    sta PIA_A_DATA
-    rts
-
-usb_init:
-    ;; Set USB_CTRL_WR and USB_CTRL_RDb pins as OUTPUT; others as input
-    lda #USB_CTRL_WR|USB_CTRL_RDb
-    sta USB_CTRL_DDR
-    rts
-
-usb_tx:
-    pha
-    lda #0
-    sta USB_DATA_DDR
-    pla
-    sta USB_DATA_OR
-    lda #USB_CTRL_TXEb
-    ;; Wait for transmitter availability
--   bit USB_CTRL_IR
-    bne -
-    lda #$ff
-    sta USB_DATA_DDR
-    lda #USB_CTRL_WRSTR
-    sta USB_CTRL_OR
-    nop
-    nop
-    lda #USB_CTRL_DEF
-    sta USB_CTRL_OR
-    rts
-
-usb_rx:
-    lda #0
-    sta USB_DATA_DDR
-    lda #USB_CTRL_RXFb
--   bit USB_CTRL_IR
-    bne -
-    lda #USB_CTRL_RDSTR
-    sta USB_CTRL_OR
-    nop
-    nop
-    nop
-    nop
-    lda USB_DATA_IR
-    pha
-    lda #USB_CTRL_DEF
-    sta USB_CTRL_OR
-    pla
-    rts
-
+    .include "mach_wdc.s"
     .endif                      ; targ=="wdc"
 
     .if targ=="x16"
-
-usb_init:
-    rts                         ; Using C64-compatible kernal chrin/chrout
-
-usb_tx:
-    jsr $FFD2                   ; C64 CHROUT
-    rts
-
-usb_rx:
--   jsr $FFE4                   ; C64 GETIN
-    cmp #0
-    beq -
-    rts
-
+    .include "mach_x16.s"
     .endif                      ; targ=="x16"
 
     .if targ=="f256"
-
-usb_init:
-    ;jsr $FF81
-    rts
-
-usb_tx:
-    jsr $FFD2                   ; C64 CHROUT
-    rts
-
-usb_rx:
--   jsr $FFE4                   ; C64 GETIN
-    cmp #0
-    beq -
-    rts
-
+    .include "mach_f256.s"
     .endif                      ; targ=="x16"
 
     .include "fth_main.s"
