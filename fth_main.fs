@@ -127,7 +127,7 @@ CODE brk
 END-CODE
 
 CODE init_serial
-    jsr usb_init
+    jsr con_init
 END-CODE
 
     ( Low-level Forth engine support )
@@ -195,7 +195,7 @@ END-CODE
 
 CODE emit
     pla
-    jsr     usb_tx
+    jsr     con_tx
     pla
 END-CODE
 
@@ -230,7 +230,7 @@ END-CODE
 CODE key
     lda #0
     pha
-    jsr usb_rx
+    jsr con_rx
     pha
 END-CODE
 

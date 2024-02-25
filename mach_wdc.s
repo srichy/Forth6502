@@ -5,7 +5,12 @@ mach_init0:
 mach_init1:
     lda #1
     jsr set_led
-    jsr usb_init
+    jsr con_init
+    rts
+
+mach_dbg:
+    ;; A has low order of new IP
+    jsr set_led
     rts
 
 set_led:
@@ -20,13 +25,13 @@ set_led:
     sta PIA_A_DATA
     rts
 
-usb_init:
+con_init:
     ;; Set USB_CTRL_WR and USB_CTRL_RDb pins as OUTPUT; others as input
     lda #USB_CTRL_WR|USB_CTRL_RDb
     sta USB_CTRL_DDR
     rts
 
-usb_tx:
+con_tx:
     pha
     lda #0
     sta USB_DATA_DDR
@@ -46,7 +51,7 @@ usb_tx:
     sta USB_CTRL_OR
     rts
 
-usb_rx:
+con_rx:
     lda #0
     sta USB_DATA_DDR
     lda #USB_CTRL_RXFb

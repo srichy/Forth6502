@@ -59,9 +59,9 @@ do_next:
     ldy #1
     lda (ip)
     sta w
-    ;jsr set_led                 ; DEBUG blinky activity
     lda (ip),y
     sta w+1
+    jsr mach_dbg
     clc
     lda ip
     adc #2
