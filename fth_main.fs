@@ -1392,7 +1392,7 @@ next_immediate
         0 >in !
         interpret
         state @ 0= if
-            bl emit 111 emit 107 emit bl emit
+            bl emit 79 emit 75 emit bl emit
         then
         0
     until
