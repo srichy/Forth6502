@@ -318,11 +318,9 @@ END-CODE
 CODE nip
     tsx
     pla
-    tay
+    sta $103,x
     pla
-    sta $102,x
-    tya
-    sta $101,x
+    sta $104,x
 END-CODE
 
 CODE tuck
@@ -1392,7 +1390,6 @@ next_immediate
     begin
         tib dup tiblen accept ticksource 2!
         0 >in !
-        brk
         interpret
         state @ 0= if
             bl emit 111 emit 107 emit bl emit
