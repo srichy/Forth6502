@@ -5,7 +5,7 @@ RFC = ../rfc/target/debug/rfc
 all: wdcForth x16Forth.prg f256Forth.pgx
 
 TARGETS = wdcForth x16Forth.prg
-SRCS = start.s fth_main.s
+SRCS = start.s fth_main.s $(wildcard mach_*.s)
 
 clean:
 	rm -f $(TARGETS) *.o *.map *.lis
