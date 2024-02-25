@@ -12,7 +12,7 @@ rsp:    .byte ?
 wjmp:   .byte ?
 w:      .addr ?
 ip:     .addr ?
-rstk:   .fill STACK_MEM
+rstk:   .fill STACK_MEM+1
 mac:    .fill 6
 here_store: .addr ?
 

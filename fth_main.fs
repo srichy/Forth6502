@@ -2,28 +2,20 @@
 
 HEADLESSCODE
 
-    previous_entry := 0
-
-
-link_entry .macro new_entry
-    .addr previous_entry
-    previous_entry := \new_entry
-    .endmacro
-
-HIGH_W .macro name_len, name, act=w_enter, flgs=0
+HIGH_W .macro name_len, name, act=w_enter, flgs=0, prev
 dict:
     .byte (\flgs << 7) | len(\name)
     .text format("%-5s", \name[:5])
-    .link_entry dict
+    .addr \prev
 cfa:
     jmp \act                  ; CFA
     .endmacro                   ; PFA implicit, follows macro
 
-CODE_W .macro name_len, name, flgs=0
+CODE_W .macro name_len, name, flgs=0, prev
 dict:
     .byte (\flgs << 7) | len(\name)
     .text format("%-5s", \name[:5])
-    .link_entry dict
+    .addr \prev
 cfa:
     .endmacro                   ; PFA implicit, follows macro
 
@@ -34,16 +26,17 @@ NEXT .macro
 banner_str: .text "HOLDFIRE 0.0"
 banner_len: .byte (* - banner_str)
 
-w_tib    .HIGH_W 3, "tib", w_var
+    ;; FIXME: Augment rfc so handle allocated VARs, etc
+w_tib    .HIGH_W 3, "tib", w_var, , "0"
     .fill 132
 
-w_pic_num    .HIGH_W 7, "pic_num", w_var
+w_pic_num    .HIGH_W 7, "pic_num", w_var, , "0"
     .fill 12
 
-w_word_space    .HIGH_W 10, "word_space", w_var
+w_word_space    .HIGH_W 10, "word_space", w_var, , "0"
     .fill 80
 
-w_core_dict    .HIGH_W 9, "core_dict", w_const
+w_core_dict    .HIGH_W 9, "core_dict", w_const, , "0"
     .addr dict_head
 
     ;; Byte is in A.  Put at here and advance here
@@ -127,6 +120,10 @@ cfa
     .NEXT
   .endblock
 
+END-CODE
+
+CODE brk
+    brk
 END-CODE
 
 CODE init_serial
@@ -314,7 +311,7 @@ CODE over
     tsx
     lda $104,x
     pha
-    lda $104,x
+    lda $103,x
     pha
 END-CODE
 
@@ -375,8 +372,8 @@ CODE 2dup
     pha
     tsx
     ldy #4
--   lda $101,x
-    sta $105,x
+-   lda $105,x
+    sta $101,x
     inx
     dey
     bne -
@@ -445,10 +442,10 @@ END-CODE
 CODE or
     tsx
     lda $101,x
-    and $103,x
+    ora $103,x
     sta $103,x
     lda $102,x
-    and $104,x
+    ora $104,x
     sta $104,x
     pla
     pla
@@ -623,7 +620,6 @@ END-CODE
 
 CODE 1+
     tsx
-    clc
     inc $101,x
     bne +
     inc $102,x
@@ -819,7 +815,7 @@ CODE >r
     pla
     sta rstk+1,x
     pla
-    lda rstk+2,x
+    sta rstk+2,x
 END-CODE
 
 CODE r>
@@ -852,6 +848,7 @@ again
 END-CODE
 
 CODE 2r>
+    brk                         ;fixme ; the below seems broken
     jsr rpop2
     tax
     ldy #4
@@ -1395,6 +1392,7 @@ next_immediate
     begin
         tib dup tiblen accept ticksource 2!
         0 >in !
+        brk
         interpret
         state @ 0= if
             bl emit 111 emit 107 emit bl emit
