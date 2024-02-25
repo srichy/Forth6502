@@ -271,14 +271,13 @@ CODE dup
 END-CODE
 
 CODE ?dup
-    pla
-    bne nonzero1
-    pla
-    bne nonzero2
+    tsx
+    lda $101,x
+    bne nonzero
+    lda $102,x
+    bne nonzero
     bra iszero
-nonzero1
-    pla
-nonzero2
+nonzero
     jmp w_dup.cfa
 iszero
 END-CODE
@@ -342,13 +341,9 @@ CODE tuck
 END-CODE
 
 CODE pick
-    pla
-    asl
-    pha
     tsx
-    txa
-    clc
-    adc $101,x
+    lda $101,x
+    asl
     tay
     lda $103,y
     sta $101,x
@@ -864,22 +859,27 @@ END-CODE
 
 CODE >cf
     ;; fixme
+    brk
 END-CODE
 
 CODE cf>
     ;; fixme
+    brk
 END-CODE
 
 CODE cf@
     ;; fixme
+    brk
 END-CODE
 
 CODE cfnip
     ;; fixme
+    brk
 END-CODE
 
 CODE cftuck
     ;; fixme
+    brk
 END-CODE
 
 CODE i
@@ -1023,7 +1023,7 @@ CODE chars
 END-CODE
 
 CODE halt
--   bra -
+    brk
 END-CODE
 
 CODE execute
@@ -1241,7 +1241,7 @@ VARIABLE dict_start
 
     48 -
     dup 0 < over 15 > or
-    abort" Word not found"
+    abort" WORD NOT FOUND"
 ;
 
 : str_to_int ( c-addr n -- n )
@@ -1262,7 +1262,7 @@ VARIABLE dict_start
     dup 43 =
     over 45 = or
     swap dup 47 > swap 58 < and or
-    0= abort" Word not found"
+    0= abort" WORD NOT FOUND"
 ;
 
 (
@@ -1493,7 +1493,8 @@ next_immediate
 ;
 
 : hello
-    s" Hello, world!"
+  brk
+    s" HELLO, WORLD!"
     type
 ;
 
