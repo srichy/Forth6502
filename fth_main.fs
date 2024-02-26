@@ -1187,7 +1187,7 @@ VARIABLE dict_start
     while ( c-addr dict_start -- )
             2dup >r >r ( c-addr dict_start -- ) ( R: dict_start c-addr -- )
             cstr_cmp if
-                r> drop r> dup 8 + swap c@ if
+                r> drop r> dup 8 + swap c@ 128 and if
                     1
                 else
                     -1
@@ -1326,16 +1326,15 @@ VARIABLE dict_start
 
 : create ( "word" -- here )
     here
-    0 c, ( make non-immediate )
-    bl word 15 cstr_to_here
+    bl word 5 cstr_to_here
     dict_start @ ,
-    lit var ,
+    lit 0x4c c, lit var ,
     dict_start !
 ;
 
 : :
     create
-    lit enter here 4 - !
+    lit enter here 2 - !
     1 state !
 ;
 
@@ -1415,6 +1414,7 @@ next_immediate
 ;
 
 : immediate
+  ( FIXME; immediate is now a bit flag )
     dict_start @
     1 c!
 ;
@@ -1422,14 +1422,14 @@ next_immediate
 next_immediate
 : if
     ['] qbranch ,
-    here >cf 0xf0f1f1f1 ,
+    here >cf 0xf0f1 ,
 ;
 
 next_immediate
 : else
     cf>
     ['] branch ,
-    here >cf 0xf0f2f2f2 ,
+    here >cf 0xf0f2 ,
     here swap !
 ;
 
@@ -1452,7 +1452,7 @@ next_immediate
 next_immediate
 : while
     ['] qbranch ,
-    here >cf 0xf1f1f1f1 ,
+    here >cf 0xf1f1 ,
 ;
 
 next_immediate
@@ -1476,7 +1476,7 @@ next_immediate
 
 next_immediate
 : leave
-  ['] branch , here 0xf2f1f1f1 ,
+  ['] branch , here 0xf2f1 ,
   cf> 1+ cf> rot >cf >cf >cf
 ;
 

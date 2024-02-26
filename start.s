@@ -34,6 +34,8 @@ here_store: .addr ?
     .endif
 
 start:
+    ldx #$ff
+    txs
     jsr mach_init0
     lda #$4c               ; jmp a opcode
     sta wjmp               ; Now we can do 'jmp wjmp' to get 'jmp (w)'
@@ -41,8 +43,6 @@ start:
     lda #STACK_MEM
     sta rsp
     ;; Init return stack
-    ldx #$ff
-    txs
     ;; Init hardware.  FIXME to make this per-platform
     jsr mach_init1
     ;; Load IP with "cold"

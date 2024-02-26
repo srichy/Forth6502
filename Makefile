@@ -21,3 +21,4 @@ x16Forth.prg: $(SRCS)
 
 f256Forth.pgx: $(SRCS)
 	$(AS) $(ASFLAGS) -D 'targ="f256"' --c256-pgx -o $@ -L $@.lis --map $@.map $<
+	$(AS) $(ASFLAGS) -D 'targ="f256"' --nostart -o f256Forth.bin -L $@.lis --map $@.map $<
