@@ -633,10 +633,10 @@ END-CODE
 CODE *
     tsx
     lda $103,x
-    stz $103
+    stz $103,x
     sta mac
     lda $104,x
-    stz $104
+    stz $104,x
     sta mac+1
     ldy #16
 again
@@ -996,6 +996,7 @@ END-CODE
 CODE c,
     pla
     jsr puthere
+    pla
 END-CODE
 
 CODE allot
@@ -1319,16 +1320,16 @@ VARIABLE dict_start
     dup c@ 1+ r@ min dup >r ( c-str copy-len -- )
     here swap move
     r> r> dup rot do
-      0 i here + c!
+      32 i here + c!
     loop
     allot
 ;
 
 : create ( "word" -- here )
     here
-    bl word 5 cstr_to_here
+    bl word 6 cstr_to_here
     dict_start @ ,
-    lit 0x4c c, lit var ,
+    0x4c c, lit var ,
     dict_start !
 ;
 

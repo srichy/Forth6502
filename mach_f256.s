@@ -159,6 +159,7 @@ y   dey
     rts
 
 mach_dbg:
+    rts
     ;; A has low order of new IP
     lda $01
     pha
