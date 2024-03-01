@@ -16,6 +16,9 @@ rstk:   .fill STACK_MEM+1
 mac:    .fill 6
 here_store: .addr ?
 
+    divisor = mac
+    dividend = mac+2
+
     .if targ=="wdc"
     * = $200
     .elsif targ=="x16"
