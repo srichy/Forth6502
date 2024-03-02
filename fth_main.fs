@@ -23,9 +23,6 @@ NEXT .macro
     jmp do_next
     .endmacro
 
-banner_str: .text "HOLDFIRE 0.0"
-banner_len: .byte (* - banner_str)
-
     ;; FIXME: Augment rfc so handle allocated VARs, etc
 w_tib    .HIGH_W 3, "tib", w_var, , "0"
     .fill 132
@@ -146,17 +143,6 @@ CODE lit
     sta ip+1
 END-CODE
 
-CODE banner
-    lda #>banner_str
-    pha
-    lda #<banner_str
-    pha
-    lda #0
-    pha
-    lda banner_len
-    pha
-END-CODE
-
 CODE exit
     ldx rsp
     lda rstk+1,x
@@ -246,14 +232,6 @@ CODE depth
     eor #$ff                    ; one's comp because zero stack == #$ff
     lsr                         ; now div by two since cells are two bytes
     pha
-END-CODE
-
-CODE pstackptr
-    lda #1
-    pha
-    tsx
-    inx                         ; this should be the actual address, not 1-
-    phx
 END-CODE
 
 CODE dup
@@ -899,16 +877,15 @@ again
 END-CODE
 
 CODE 2r>
-    brk                         ;fixme ; the below seems broken
-    jsr rpop2
-    tax
+    ldx rsp
     ldy #4
-again
-    lda $101,x
+again:
+    lda $104,x
     pha
     dex
     dey
     bne again
+    jsr rpop2
 END-CODE
 
 CODE 2rdrop
@@ -938,18 +915,23 @@ CODE cf>
 END-CODE
 
 CODE cf@
-    ;; fixme
-    brk
+    ldx cfp
+    lda CORE_MEM_END+2,x
+    pha
+    lda CORE_MEM_END+1,x
+    pha
 END-CODE
 
 CODE cfnip
-    ;; fixme
-    brk
-END-CODE
-
-CODE cftuck
-    ;; fixme
-    brk
+    ;; fixme: not yet tested
+    ldx cfp
+    lda CORE_MEM_END+2,x
+    sta CORE_MEM_END+4,x
+    lda CORE_MEM_END+1,x
+    sta CORE_MEM_END+3,x
+    inx
+    inx
+    stx cfp
 END-CODE
 
 CODE i
@@ -1373,15 +1355,13 @@ VARIABLE dict_start
 
 : .s
     depth ?dup if
-      dup 60 emit . 62 emit ( hack until dot-quote implemented; fixme )
-      pstackptr
-      swap 0 do
+      dup ." <" . ." >"
+      0 do
         space
-        dup i cells + @ . ( 1+ because TOS in reg; *psp0 is garbage )
+        0x1fe i cells - @ .
       loop
-      drop
     else
-      60 emit 48 emit 62 emit space ( hack until dot-quote implemented; fixme )
+      ." <0> "
     then
     cr
 ;
@@ -1581,7 +1561,7 @@ next_immediate
     init_serial
     core_dict @ dict_start !
 
-    banner type cr
+    ." HOLDFORTH 0.1" cr
     quit
     depth
     bye
