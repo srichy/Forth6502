@@ -2,6 +2,10 @@
 
     .if targ=="wdc"
     .include "wdc65c816sxb.inc"
+    .elsif targ=="x16"
+    .include "x16.inc"
+    .elsif targ=="f256"
+    .include "f256.inc"
     .endif
 
     STACK_MEM = $80 - $22 - $10
@@ -15,6 +19,7 @@ ip:     .addr ?
 rstk:   .fill STACK_MEM+1
 mac:    .fill 6
 here_store: .addr ?
+cfp:    .byte ?
 
     divisor = mac
     dividend = mac+2
@@ -39,6 +44,7 @@ here_store: .addr ?
 start:
     ldx #$ff
     txs
+    stx cfp
     jsr mach_init0
     lda #$4c               ; jmp a opcode
     sta wjmp               ; Now we can do 'jmp wjmp' to get 'jmp (w)'

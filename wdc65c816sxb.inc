@@ -1,5 +1,7 @@
 ;;; -*- asm -*-
 
+    CORE_MEM_END = $7eff - $ff
+
 ;;;  SXB Block Addresses
     BLK_VIA_USB = $7fe0
     BLK_VIA_PORT = $7fc0

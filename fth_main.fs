@@ -916,13 +916,25 @@ CODE 2rdrop
 END-CODE
 
 CODE >cf
-    ;; fixme
-    brk
+    ldx cfp
+    dex
+    dex
+    stx cfp
+    pla
+    sta CORE_MEM_END+1,x
+    pla
+    sta CORE_MEM_END+2,x
 END-CODE
 
 CODE cf>
-    ;; fixme
-    brk
+    ldx cfp
+    lda CORE_MEM_END+2,x
+    pha
+    lda CORE_MEM_END+1,x
+    pha
+    inx
+    inx
+    stx cfp
 END-CODE
 
 CODE cf@
@@ -1009,6 +1021,7 @@ CODE do_loop1
 +   sec
     lda rstk+3,x
     sbc rstk+1,x
+    bne loop_again
     lda rstk+4,x
     sbc rstk+2,x
     bne loop_again
@@ -1023,7 +1036,7 @@ CODE do_loop1
 loop_again:
     ldy #1
     lda (ip)
-    tsx
+    tax
     lda (ip),y
     sta ip+1
     stx ip
@@ -1364,7 +1377,7 @@ VARIABLE dict_start
       pstackptr
       swap 0 do
         space
-        dup i 1+ cells - @ . ( 1+ because TOS in reg; *psp0 is garbage )
+        dup i cells + @ . ( 1+ because TOS in reg; *psp0 is garbage )
       loop
       drop
     else
@@ -1568,7 +1581,6 @@ next_immediate
     init_serial
     core_dict @ dict_start !
 
-    key drop
     banner type cr
     quit
     depth
