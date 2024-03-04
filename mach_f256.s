@@ -1,4 +1,15 @@
 mach_init0:
+    lda 1
+    pha
+    stz 1
+    lda #$00
+    sta $d001
+
+    lda #32
+    sta $d012                   ; space for cursor?
+
+    pla
+    sta 1
     rts
 
 mach_init1:

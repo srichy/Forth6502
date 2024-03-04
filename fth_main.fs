@@ -185,6 +185,32 @@ CODE emit
     pla
 END-CODE
 
+( c-addr u char -- )
+CODE fill
+    pla
+    sta mac                     ; char
+    pla
+    pla
+    tay                         ; low byte of count
+    pla
+    tax                         ; high byte of count
+    pla
+    sta mac+1                   ; base dest addr (l)
+    pla
+    sta mac+2                   ; base dest addr (h)
+    txa
+    clc
+    adc mac+2                   ; pre-increment high order
+    sta mac+2
+    lda mac
+-   sta (mac+1),y
+    dey
+    bpl -
+    dec mac+2                   ; high order dec on low-order wrap
+    dex
+    bpl -
+END-CODE
+
 : type ( c-addr u -- )
     0 do
         dup i + c@ emit
@@ -1147,9 +1173,27 @@ END-CODE
             0
         then
     while ( e b k -- )
+        case
+            8 of ( e b -- )
+                2dup - 0> if ( This is room to backspace )
+                    8 emit
+                    1-
+                    bl over c!
+                then
+            endof
+            127 of ( DEL; duplicate of BS above )
+                2dup - 0> if ( This is room to backspace )
+                    8 emit
+                    1-
+                    bl over c!
+                then
+            endof
+            ( e b k -- )
             dup emit
             over c!
             1+
+            0 ( make endcase happy )
+        endcase
     repeat
     -
     r> swap -
@@ -1353,6 +1397,14 @@ VARIABLE dict_start
     then
 ;
 
+: max
+    2dup > if
+      drop
+    else
+      nip
+    then
+;
+
 : .s
     depth ?dup if
       dup ." <" . ." >"
@@ -1443,7 +1495,7 @@ next_immediate
         0 >in !
         interpret
         state @ 0= if
-            bl emit 79 emit 75 emit bl emit
+            bl emit ." OK "
         then
         0
     until
