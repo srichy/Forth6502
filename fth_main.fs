@@ -226,7 +226,8 @@ END-CODE
     dup c@ 0x7f and rot dup c@ rot over = if
         0 do
             1+ swap 1+
-            dup c@ rot dup c@ rot <> if
+            ( case-insensitive search for ASCII only! )
+            dup c@ 0xdf and rot dup c@ 0xdf and rot <> if
                 2drop unloop 0 exit
             then
         loop
@@ -1148,55 +1149,48 @@ incdest
 finished
 END-CODE
 
-: is_eol ( c -- n )
-    dup
-    10 =
-    swap
-    13 =
-    or
+CODE get_bs
+    lda #0
+    pha
+    jsr raw_bs
+    pha
+END-CODE
+
+: do_bs ( a-end a-cur a-beg -- a-end a-cur 0 ; R: +n1 a-beg -- )
+    over < if
+        get_bs emit
+        1- bl over c!
+    then
+    0 ( continue taking keys )
 ;
 
-: accept ( c-addr +n1 -- +n2 )
-    dup >r
-    over + swap ( end-addr base-addr -- )
+: do_insert ( a-end a-cur k -- a-end a-cur n 0|-1 )
+    dup emit
+    over c!
+    2dup > if ( do we have room for more chars ? )
+        1+ 0
+    else
+        -1 ( No more room; exit key taking loop )
+    then
+;
 
-    begin
-        2dup - if
-            key dup is_eol if
-                drop cr
-                bl over c!
-                0 ( e b 0 -- )
-            else
-                dup
-            then
-        else
-            0
-        then
-    while ( e b k -- )
-        case
-            8 of ( e b -- )
-                2dup - 0> if ( This is room to backspace )
-                    8 emit
-                    1-
-                    bl over c!
-                then
-            endof
-            127 of ( DEL; duplicate of BS above )
-                2dup - 0> if ( This is room to backspace )
-                    8 emit
-                    1-
-                    bl over c!
-                then
-            endof
-            ( e b k -- )
-            dup emit
-            over c!
-            1+
-            0 ( make endcase happy )
+: accept ( a-beg +n1 -- +n2 )
+    dup >r
+    over dup >r + swap ( a-end a-beg -- )
+
+    begin ( a-end a-cur -- a-end a-cur )
+        key case
+            10 of cr -1 endof
+            13 of cr -1 endof
+            8 of r@ do_bs endof
+            127 of r@ do_bs endof
+            20 of r@ do_bs endof
+            do_insert 0
         endcase
-    repeat
+    until
+
     -
-    r> swap -
+    r> drop r> swap -
 ;
 
 : is_delim ( c delim -- f )

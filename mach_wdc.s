@@ -69,3 +69,7 @@ con_rx:
     sta USB_CTRL_OR
     pla
     rts
+
+raw_bs:
+    lda #8
+    rts

@@ -201,3 +201,7 @@ con_rx:
     cmp #0
     beq -
     rts
+
+raw_bs:
+    lda #8
+    rts
