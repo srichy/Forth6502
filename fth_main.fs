@@ -1022,6 +1022,44 @@ loop_again:
 finished:
 END-CODE
 
+( full loop terminator include dropping loop counters from rstk )
+CODE do_plus_loop
+    ;; Increment loop counter
+    ldx rsp
+    clc
+    pla
+    adc rstk+1,x
+    sta rstk+1,x
+    pla
+    adc rstk+2,x
+    sta rstk+2,x
+
+    ;; Compare counter with limit, (count - limit here though)
+    sec
+    lda rstk+1,x
+    sbc rstk+3,x
+    lda rstk+2,x
+    sbc rstk+4,x
+    bcc loop_again              ; If carry is clear, counter < limit
+
+    jsr rpop2
+    clc
+    lda ip
+    adc #2
+    sta ip
+    bcc +
+    inc ip+1
++   bra finished
+loop_again:
+    ldy #1
+    lda (ip)
+    tax
+    lda (ip),y
+    sta ip+1
+    stx ip
+finished:
+END-CODE
+
 ( loop terminator that does not clear the rstk )
 CODE do_loop1
     ldx rsp
@@ -1573,12 +1611,28 @@ next_immediate
 
 next_immediate
 : leave
-  ['] branch , here 0xf2f1 , ( These 0xf2f1s will get replaced by resolve_leaves )
+    brk ( this is still broken somehow; fixme )
+    ['] branch , 0xf2f1 , ( These 0xf2f1s will get replaced by resolve_leaves )
+;
+
+: resolve_leaves ( C: loop-orig here/unloop-dest -- )
+    dup >r ['] branch ( loop-orig here/unloop-dest branch-xt -- )
+    swap rot ( branch-xt here/unloop-dest loop-orig -- )
+    do
+        dup i @ = if
+            i 2 + @ 0xf2f1 = if
+                r@ i 2 + .s !
+            then
+        then
+    2 +loop
+    r>
+    2drop
 ;
 
 next_immediate
 : loop ( C: do-sys -- )
-    ['] do_loop1 , cf> ,
+    ['] do_loop1 , cf> dup , ( loop target was top-of-C: stack )
+    here resolve_leaves
     ['] unloop ,
 ;
 
@@ -1590,6 +1644,27 @@ next_immediate
 : abort_test
     1 abort" This should print then abort."
     s" This should not print." type
+;
+
+: plt ( plus loop test )
+    ." Testing +LOOP..." cr
+
+    ." [1] 0-4 +2" cr
+    4 0 do
+        i . bl emit
+        2
+    +loop
+    cr ." [1] Done." cr
+
+    ." [2] 1-4 +2" cr
+    4 1 do
+        i . bl emit
+        i 5 = if
+            brk
+        then
+        2
+    +loop
+    cr ." [2] Done. " cr
 ;
 
 : cold
