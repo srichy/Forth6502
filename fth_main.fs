@@ -1611,22 +1611,19 @@ next_immediate
 
 next_immediate
 : leave
-    brk ( this is still broken somehow; fixme )
     ['] branch , 0xf2f1 , ( These 0xf2f1s will get replaced by resolve_leaves )
 ;
 
 : resolve_leaves ( C: loop-orig here/unloop-dest -- )
-    dup >r ['] branch ( loop-orig here/unloop-dest branch-xt -- )
-    swap rot ( branch-xt here/unloop-dest loop-orig -- )
+    dup rot
     do
-        dup i @ = if
-            i 2 + @ 0xf2f1 = if
-                r@ i 2 + .s !
+        i @ 0xf2f1 = if
+            ['] branch i 2 - @ = if
+                dup i !
             then
         then
     2 +loop
-    r>
-    2drop
+    drop
 ;
 
 next_immediate
