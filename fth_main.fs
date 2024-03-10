@@ -119,6 +119,7 @@ cfa
 
 END-CODE
 
+next_immediate
 CODE brk
     brk
 END-CODE
@@ -1413,13 +1414,11 @@ VARIABLE dict_start
 ;
 
 : cstr_to_here ( c-str maxlen -- )
-    >r
-    dup c@ 1+ r@ min dup >r ( c-str copy-len -- )
+    here over bl fill
+    dup >r
+    over c@ 1+ min ( c-str min -- )
     here swap move
-    r> r> dup rot do
-      32 i here + c!
-    loop
-    allot
+    r> allot
 ;
 
 : create ( "word" -- here )
@@ -1518,13 +1517,13 @@ next_immediate
 ;
 
 next_immediate
-: if
+: if ( C: -- dest )
     ['] qbranch ,
     here >cf 0xf0f1 ,
 ;
 
 next_immediate
-: else
+: else ( C: orig1 -- orig2 )
     cf>
     ['] branch ,
     here >cf 0xf0f2 ,
@@ -1532,62 +1531,55 @@ next_immediate
 ;
 
 next_immediate
-: then
+: then ( C: orig -- )
     here cf> !
 ;
 
 next_immediate
-: begin
+: begin ( C: -- dest )
     here >cf
 ;
 
 next_immediate
-: until
+: until ( C: dest -- )
     ['] qbranch ,
     cf> ,
 ;
 
 next_immediate
-: while
+: while ( C: dest -- dest orig ) ( I think I implemented dest orig instead; fixme )
     ['] qbranch ,
     here >cf 0xf1f1 ,
 ;
 
 next_immediate
-: repeat
+: repeat ( C: dest orig -- )
     cf> cf>
     ['] branch , ,
     here swap !
 ;
 
 next_immediate
-: again
+: again ( C: dest -- )
     ['] branch ,
     cf> ,
 ;
 
 next_immediate
-: do
+: do ( C: -- do-sys )
     ['] 2>r ,
-    here >cf 0 >cf
+    here >cf
 ;
 
 next_immediate
 : leave
-  ['] branch , here 0xf2f1 ,
-  cf> 1+ cf> rot >cf >cf >cf
+  ['] branch , here 0xf2f1 , ( These 0xf2f1s will get replaced by resolve_leaves )
 ;
 
 next_immediate
-: loop
-  ['] do_loop1 , cf> ( count of leaves )
-  cf> , ( do target )
-  ?dup if
-    0 do
-      here cf> !
-    loop
-  then
-  ['] unloop ,
+: loop ( C: do-sys -- )
+    ['] do_loop1 , cf> ,
+    ['] unloop ,
 ;
 
 : hello
