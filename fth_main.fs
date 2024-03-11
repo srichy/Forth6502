@@ -225,6 +225,8 @@ END-CODE
 
 : cstr_cmp ( c-addr1 dict_start -- f )
     dup c@ 0x7f and rot dup c@ rot over = if
+        ( Limit to 5 significant chars )
+        5 min
         0 do
             1+ swap 1+
             ( case-insensitive search for ASCII only! )
@@ -1549,9 +1551,7 @@ next_immediate
 ;
 
 : immediate
-  ( FIXME; immediate is now a bit flag )
-    dict_start @
-    1 c!
+    dict_start @ dup c@ 0x80 or swap c!
 ;
 
 next_immediate
