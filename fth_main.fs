@@ -23,13 +23,6 @@ NEXT .macro
     jmp do_next
     .endmacro
 
-    ;; FIXME: Augment rfc so handle allocated VARs, etc
-w_tib    .HIGH_W 3, "tib", w_var, , "0"
-    .fill 132
-
-w_word_space    .HIGH_W 10, "word_space", w_var, , "0"
-    .fill 80
-
 w_core_dict    .HIGH_W 9, "core_dict", w_const, , "0"
     .addr dict_head
 
@@ -1303,6 +1296,9 @@ END-CODE
     drop
     word_space
 ;
+
+VARIABLE tib 132 XALLOT
+VARIABLE word_space 80 XALLOT
 
 12 CONSTANT pic_num_size
 VARIABLE pic_num_off
