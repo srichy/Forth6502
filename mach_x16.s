@@ -9,8 +9,8 @@ mach_dbg:
     rts
 
 con_init:
-    ;lda #$0f                ; ISO mode
-    ;jsr $FFD2
+    lda #$0f                ; ISO mode
+    jsr $FFD2
     rts                         ; Using C64-compatible kernal chrin/chrout
 
 con_tx:

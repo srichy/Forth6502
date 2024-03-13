@@ -1657,6 +1657,38 @@ next_immediate
     s" This should not print." type
 ;
 
+: disp_char ( c -- )
+    dup 32 < over 126 > or if
+        drop
+        46 emit
+    else
+        emit
+    then
+;
+
+: dump ( addr u -- )
+    dup 0= if
+        drop
+        exit
+    then
+    base @ >r
+    16 base !
+    over + dup rot do
+        i <# # # # # 32 hold #> type
+        dup i 8 + min i do
+            i @ <# # # 32 hold #> type
+        loop
+        bl emit
+        dup i 8 + min i do
+            i @ disp_char
+        loop
+        cr
+        8
+    +loop
+    drop
+    r> base !
+;
+
 : plt ( plus loop test )
     ." Testing +LOOP..." cr
 
