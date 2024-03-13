@@ -1689,6 +1689,29 @@ next_immediate
     r> base !
 ;
 
+: print_name ( name-addr -- )
+    dup 1+ swap c@ 0x7f and dup 6 < if
+        type
+    else
+        ( Name is longer than 5 chars; show length )
+        <# 62 hold #s 60 hold #> type
+        5 type
+    then
+;
+
+: words ( -- )
+    dict_start @
+
+    begin
+        ( dict_next -- )
+        ?dup
+    while ( dict_next -- )
+        dup >r ( dict_start -- ) ( R: dict_start -- )
+        print_name bl emit
+        r> 6 + @
+    repeat
+;
+
 : plt ( plus loop test )
     ." Testing +LOOP..." cr
 
