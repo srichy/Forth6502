@@ -27,9 +27,6 @@ NEXT .macro
 w_tib    .HIGH_W 3, "tib", w_var, , "0"
     .fill 132
 
-w_pic_num    .HIGH_W 7, "pic_num", w_var, , "0"
-    .fill 12
-
 w_word_space    .HIGH_W 10, "word_space", w_var, , "0"
     .fill 80
 
@@ -165,19 +162,39 @@ CODE r0
     sta rsp
 END-CODE
 
-( Brute-force until pictured numeric support added )
 : . ( x -- )
+    <# #s #> type
+;
+
+: <# ( -- )
     pic_num_size pic_num_off !
+;
+
+: hold ( n -- )
+    -1 pic_num_off +!
+    pic_num pic_num_off @ + c!
+;
+
+: # ( ud1 -- ud2 )
+    base @ /mod swap ( -- ud2 rem )
+    dup 10 < if
+        0x30 + hold
+    else
+        55 + hold
+    then
+;
+
+: #s ( ud1 -- ud2 )
     begin
-      -1 pic_num_off +!
-      dup 10 / swap 10 mod   ( x r -- )
-      0x30 + pic_num pic_num_off @ + c!
-      dup 0=
+        #
+        dup 0=
     until
+;
+
+: #> ( xd -- c-addr u )
     drop
     pic_num pic_num_off @ +
     pic_num_size pic_num_off @ -
-    type
 ;
 
 CODE emit
@@ -1289,6 +1306,7 @@ END-CODE
 
 12 CONSTANT pic_num_size
 VARIABLE pic_num_off
+VARIABLE pic_num 12 XALLOT
 
 VARIABLE base
 VARIABLE >in
