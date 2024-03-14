@@ -1676,11 +1676,11 @@ next_immediate
     over + dup rot do
         i <# # # # # 32 hold #> type
         dup i 8 + min i do
-            i @ <# # # 32 hold #> type
+            i c@ <# # # 32 hold #> type
         loop
         bl emit
         dup i 8 + min i do
-            i @ disp_char
+            i c@ disp_char
         loop
         cr
         8
