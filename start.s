@@ -36,8 +36,14 @@ cfp:    .byte ?
     *   = $0820
 
     .elsif targ=="f256"
+    .include "api.asm"
 
-    * = $1000
+    ;; Still in zero page
+event .dstruct kernel.event.event_t
+    screen_x .byte ?
+    screen_y .byte ?
+    scrptr .addr ?
+    * = $200
 
     .endif
 

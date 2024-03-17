@@ -696,65 +696,7 @@ END-CODE
 ;
 
 CODE /mod
-    tsx
-    lda $101,x
-    sta divisor
-    lda $102,x
-    sta divisor+1
-    lda $103,x
-    sta dividend
-    lda $104,x
-    sta dividend+1
-    ;; Taken almost verbatim from the WDC 65816 6502 Programming Manual
-    lda #0
-    tax
-    pha
-    ldy #1
-    lda divisor
-    bmi div2
-div1:
-    iny
-    asl divisor
-    rol divisor+1
-    bmi div2
-    cpy #17
-    bne div1
-div2:
-    sec
-    lda dividend
-    sbc divisor
-    pha
-    lda dividend+1
-    sbc divisor+1
-    bcc div3
-    sta dividend+1
-    pla
-    sta dividend
-    pha
-div3:
-    pla
-    pla
-    rol
-    pha
-    txa
-    rol
-    tax
-    lsr divisor+1
-    ror divisor
-    dey
-    bne div2
-done:
-    pla
-    tay
-    txa
-    tsx
-    sta $102,x
-    tya
-    sta $101,x
-    lda dividend
-    sta $103,x
-    lda dividend+1
-    sta $104,x
+    jmp ll_mult
 END-CODE
 
 CODE 2@
