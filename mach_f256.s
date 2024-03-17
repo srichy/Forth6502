@@ -17,68 +17,23 @@
     REMU_H = $de17
 
 ll_mult:
-    tsx
-    lda $101,x
-    sta divisor
-    lda $102,x
-    sta divisor+1
-    lda $103,x
-    sta dividend
-    lda $104,x
-    sta dividend+1
-    ;; Taken almost verbatim from the WDC 65816 6502 Programming Manual
-    lda #0
-    tax
-    pha
-    ldy #1
-    lda divisor
-    bmi div2
-div1:
-    iny
-    asl divisor
-    rol divisor+1
-    bmi div2
-    cpy #17
-    bne div1
-div2:
-    sec
-    lda dividend
-    sbc divisor
-    pha
-    lda dividend+1
-    sbc divisor+1
-    bcc div3
-    sta dividend+1
+    stz 1
     pla
-    sta dividend
+    sta MULU_A_L
+    pla
+    sta MULU_A_H
+    pla
+    sta MULU_B_L
+    pla
+    sta MULU_B_H
+    lda MULU_LH
     pha
-div3:
-    pla
-    pla
-    rol
+    lda MULU_LL
     pha
-    txa
-    rol
-    tax
-    lsr divisor+1
-    ror divisor
-    dey
-    bne div2
-done:
-    pla
-    tay
-    txa
-    tsx
-    sta $102,x
-    tya
-    sta $101,x
-    lda dividend
-    sta $103,x
-    lda dividend+1
-    sta $104,x
     jmp do_next
 
-    ;; The following is not working; fixme
+ll_slash_mod:
+    stz 1
     tsx
     lda $101,x
     sta DIVU_D_L
@@ -443,4 +398,8 @@ _do_erase:
     ldx screen_x
     ldy screen_y
     jsr gotoxy
+    rts
+
+    ;; A has the number of lines.  60 is "clear screen"
+scroll_up:
     rts

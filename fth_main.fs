@@ -649,42 +649,7 @@ CODE 1-
 END-CODE
 
 CODE *
-    tsx
-    lda $103,x
-    stz $103,x
-    sta mac
-    lda $104,x
-    stz $104,x
-    sta mac+1
-    ldy #16
-again
-    ;; Shift multiplier 1 bit right and check for carry
-    lda $102,x
-    lsr
-    sta $102,x
-    lda $101,x
-    ror
-    sta $101,x
-    bcc skip_add
-    ;; Carry set. Add multiplicant to accumulator
-    clc
-    lda mac
-    adc $103,x
-    sta $103,x
-    lda mac+1
-    adc $104,x
-    sta $104,x
-skip_add
-    lda mac
-    asl
-    sta mac
-    lda mac+1
-    rol
-    sta mac+1
-    dey
-    bne again
-    pla
-    pla
+    jmp ll_mult
 END-CODE
 
 : /
@@ -696,7 +661,7 @@ END-CODE
 ;
 
 CODE /mod
-    jmp ll_mult
+    jmp ll_slash_mod
 END-CODE
 
 CODE 2@
