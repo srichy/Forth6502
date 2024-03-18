@@ -196,7 +196,15 @@ CODE emit
     pla
 END-CODE
 
-( c-addr u char -- )
+CODE page
+    lda #255                    ; Hopefully worst-case terminal size
+    jsr scroll_up
+    ldx #0
+    ldy #0
+    jsr gotoxy
+END-CODE
+
+    ( c-addr u char -- )
 CODE fill
     pla
     sta mac                     ; char

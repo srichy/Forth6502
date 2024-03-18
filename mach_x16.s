@@ -127,3 +127,10 @@ done:
     lda dividend+1
     sta $104,x
     jmp do_next
+
+gotoxy:
+    rts
+
+scroll_up:
+    brk
+    nop

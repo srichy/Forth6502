@@ -1,21 +1,3 @@
-    MULU_A_L = $de00
-    MULU_A_H = $de01
-    MULU_B_L = $de02
-    MULU_B_H = $de03
-    MULU_LL = $de10
-    MULU_LH = $de11
-    MULU_HL = $de12
-    MULU_HH = $de13
-
-    DIVU_D_L = $de04
-    DIVU_D_H = $de05
-    DIVU_N_L = $de06
-    DIVU_N_H = $de07
-    QUOT_L = $de14
-    QUOT_H = $de15
-    REMU_L = $de16
-    REMU_H = $de17
-
 ll_mult:
     stz 1
     pla
@@ -360,9 +342,15 @@ _maybe_13
 _maybe_10
     cmp #10
     bne _doout
-    ldx screen_x
     ldy screen_y
     iny
+    cpy #59
+    bcc _no_scroll
+    lda #1
+    jsr scroll_up
+    ldy screen_y
+_no_scroll:
+    ldx screen_x
     jmp gotoxy
 _doout
     jmp dispchar
@@ -400,6 +388,96 @@ _do_erase:
     jsr gotoxy
     rts
 
-    ;; A has the number of lines.  60 is "clear screen"
+    ;; A has the number of lines.  >=60 is "clear screen"
+    ;; mac0,1 == dest
+    ;; mac2,3 == src
+    ;; mac4 == scroll count
 scroll_up:
+    cmp #60
+    bcc _in_bounds
+    lda #60
+_in_bounds:
+    stz 1                       ; Access coproc, etc.
+    sta mac+4                   ; Save line count
+    sta MULU_B_L
+    lda #$c0                    ; Initial destination
+    stz mac+0
+    sta mac+1
+    lda #80
+    sta MULU_A_L
+    stz MULU_A_H
+    stz MULU_B_H
+    lda MULU_LL
+    sta mac+2
+    lda MULU_LH
+    ora #$c0
+    sta mac+3
+    ;; set up move loop
+    lda #2                      ; Text memory
+    sta 1
+    sec
+    lda #60
+    sbc mac+4
+    tax
+_move_another:
+    ldy #0
+    cpx #0
+    beq _do_blanks
+_do_line_copy:
+    lda (mac+2),y
+    sta (mac+0),y
+    iny
+    cpy #80
+    bne _do_line_copy
+    clc
+    lda mac+0
+    adc #80
+    sta mac+0
+    lda mac+1
+    adc #0
+    sta mac+1
+    clc
+    lda mac+2
+    adc #80
+    sta mac+2
+    lda mac+3
+    adc #0
+    sta mac+3
+    dex
+    bra _move_another
+_do_blanks:
+    sec
+    lda #60
+    sbc mac+4
+    stz 1
+    sta MULU_A_L
+    stz MULU_A_H
+    lda #80
+    sta MULU_B_L
+    stz MULU_B_H
+    lda MULU_LL
+    sta mac+0
+    lda MULU_LH
+    ora #$c0
+    sta mac+1
+    ldx mac+4                   ; number of lines to blank
+    ldy #2
+    sty 1
+_blank_line:
+    ldy #0
+    lda #32
+_blank_char:
+    sta (mac+0),y
+    iny
+    cpy #80
+    bne _blank_char
+    clc
+    lda mac+0
+    adc #80
+    sta mac+0
+    lda mac+1
+    adc #0
+    sta mac+1
+    dex
+    bne _blank_line
     rts
