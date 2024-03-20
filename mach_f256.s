@@ -37,40 +37,25 @@ ll_slash_mod:
     jmp do_next
 
 
-    ;; This lovely routine is from the Foenix F256_MicroKernel:
-    ;; https://github.com/ghackwrench/F256_MicroKernel.git
-    ;; If I get the integer coprocessor working, I may switch to that.
 gotoxy:
     pha
     stx screen_x
     sty screen_y
-    stz scrptr+1
-    tya
-    asl a
-    asl a
-    rol scrptr+1
-    adc screen_y
-    asl a
-    rol scrptr+1
-    asl a
-    rol scrptr+1
-    asl a
-    rol scrptr+1
-    asl a
-    rol scrptr+1
-    sta scrptr+0
-
-    lda scrptr+1
-    adc #$c0
+    stz 1
+    lda #80
+    sta MULU_A_L
+    stz MULU_A_H
+    sty MULU_B_L
+    stz MULU_B_H
+    lda MULU_LL
+    sta scrptr
+    lda MULU_LH
+    ora #$c0
     sta scrptr+1
-    lda 1
-    ldx #0
-    stx 1
     ldx screen_x
     stx $d014
     ldx screen_y
     stx $d016
-    sta 1
     pla
     rts
 
@@ -322,6 +307,9 @@ mach_dbg:
     rts
 
 con_init:
+    stz 1
+    lda #0
+    sta $d004                   ;turn off the border?
     lda #32
     jsr screenfill
     ldx #0
