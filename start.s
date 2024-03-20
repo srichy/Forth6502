@@ -40,9 +40,9 @@ cfp:    .byte ?
 
     ;; Still in zero page
 event .dstruct kernel.event.event_t
-    screen_x .byte ?
-    screen_y .byte ?
-    scrptr .addr ?
+screen_x: .byte ?
+screen_y: .byte ?
+scrptr: .addr ?
     * = $200
 
     .endif

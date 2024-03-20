@@ -9,12 +9,18 @@ mach_dbg:
     rts
 
 con_init:
-    lda #$0f                ; ISO mode
+    jsr $ff81                   ; CINT
+    lda #$0f                    ; ISO mode
+    sta screen_y                ; force recompute in gotoxy
     jsr $FFD2
+    ldx #0
+    ldy #0
+    jsr gotoxy
     rts                         ; Using C64-compatible kernal chrin/chrout
 
 con_tx:
-    jsr $FFD2                   ; C64 CHROUT
+    ;jsr $FFD2                   ; C64 CHROUT
+    jsr dispchar
     rts
 
 con_rx:
@@ -128,7 +134,66 @@ done:
     sta $104,x
     jmp do_next
 
+    vera_addrx_l = $9f20
+    vera_addrx_m = $9f21
+    vera_addrx_h = $9f22
+    vera_data0 = $9f23
+    vera_data1 = $9f24
+    vera_ctrl = $9f25
+    vera_text_base = $1b000
+
+    vera_incr_1_h = $11         ; increment by 2; 1 for high-order addr bit
+
+screen_x: .byte ?
+screen_y: .byte ?
+scrptr: .addr ?
+
+dispchar:
+    sta vera_data0
+    ldy screen_y
+    inc screen_x
+    ldx screen_x
+    cpx #80
+    bcc _done
+    ldx #0
+    iny
+_done:
+    jsr gotoxy
+    rts
+
 gotoxy:
+    pha
+    stx screen_x
+    cpy screen_y
+    beq _add_col
+    sty screen_y
+    lda #<vera_text_base
+    sta scrptr
+    lda #>vera_text_base
+    sta scrptr+1
+_add_row:
+    cpy #0
+    beq _add_col
+    dey
+    clc
+    lda #160
+    adc scrptr
+    sta scrptr
+    bcc _add_row
+    inc scrptr+1
+    bra _add_row
+_add_col:
+    clc
+    txa
+    asl                         ; x2; Thanks, VERA. :(
+    adc scrptr
+    sta vera_addrx_l
+    lda #0
+    adc scrptr+1
+    sta vera_addrx_m
+    lda #vera_incr_1_h
+    sta vera_addrx_h
+    pla
     rts
 
 scroll_up:
