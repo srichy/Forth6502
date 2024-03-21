@@ -8,6 +8,21 @@ mach_dbg:
     ;; A has low order of new IP
     rts
 
+mach_hex_char:
+    tsx
+    lda $101,x
+    cmp #10
+    bcc _is_digit
+    sec
+    sbc #9
+    bra _done
+_is_digit:
+    clc
+    adc #$30
+_done:
+    sta $101,x
+    jmp do_next
+
 con_init:
     jsr $ff81                   ; CINT
     lda #$0f                    ; ISO mode
@@ -18,10 +33,35 @@ con_init:
     jsr gotoxy
     rts                         ; Using C64-compatible kernal chrin/chrout
 
-con_tx:
-    ;jsr $FFD2                   ; C64 CHROUT
-    jsr dispchar
+con_tx0:
+    jsr $FFD2                   ; C64 CHROUT
     rts
+
+con_tx:
+    cmp #20                      ; backspace
+    bne _maybe_13
+    jmp do_bs
+_maybe_13
+    cmp #13
+    bne _maybe_10
+    ldx #0
+    ldy screen_y
+    jmp gotoxy
+_maybe_10
+    cmp #10
+    bne _doout
+    ldy screen_y
+    iny
+    cpy #59
+    bcc _no_scroll
+    lda #1
+    jsr scroll_up
+    ldy screen_y
+_no_scroll:
+    ldx screen_x
+    jmp gotoxy
+_doout
+    jmp dispchar
 
 con_rx:
 -   jsr $FFE4                   ; C64 GETIN
@@ -142,7 +182,9 @@ done:
     vera_ctrl = $9f25
     vera_text_base = $1b000
 
-    vera_incr_1_h = $11         ; increment by 2; 1 for high-order addr bit
+    vera_incr_1_h = $21         ; 1 for high-order addr bit
+    vera_addr0 = $00            ; for ADDRSEL in vera_ctrl
+    vera_addr1 = $01
 
 screen_x: .byte ?
 screen_y: .byte ?
@@ -155,11 +197,15 @@ dispchar:
     ldx screen_x
     cpx #80
     bcc _done
-    ldx #0
     iny
+    stz screen_x
+    ldx #0
+    cpy #60
+    bcc _done
+    lda #1
+    jsr scroll_up
 _done:
-    jsr gotoxy
-    rts
+    jmp gotoxy
 
 gotoxy:
     pha
@@ -175,17 +221,12 @@ _add_row:
     cpy #0
     beq _add_col
     dey
-    clc
-    lda #160
-    adc scrptr
-    sta scrptr
-    bcc _add_row
-    inc scrptr+1
+    inc scrptr+1                ; Count by 256, because... VERA!
     bra _add_row
 _add_col:
-    clc
     txa
-    asl                         ; x2; Thanks, VERA. :(
+    asl                         ; x2; VERA interleaves w/color
+    clc
     adc scrptr
     sta vera_addrx_l
     lda #0
@@ -196,6 +237,69 @@ _add_col:
     pla
     rts
 
+do_bs:
+    dec screen_x
+    bpl _do_erase
+    inc screen_x
+_do_erase:
+    ldx screen_x
+    ldy screen_y
+    jsr gotoxy
+    ldx screen_x
+    ldy screen_y
+    lda #32
+    jsr dispchar
+    dec screen_x
+    ldx screen_x
+    ldy screen_y
+    jsr gotoxy
+    rts
+
+    ;; A has the number of lines.  >=60 is "clear screen"
+    ;; mac0,1 == dest
+    ;; mac2,3 == src
+    ;; mac4 == scroll count
 scroll_up:
-    brk
-    nop
+    cmp #60
+    bcc _in_bounds
+    lda #60
+_in_bounds:
+    sta mac+4                   ; Save line count
+    lda #vera_addr0             ; Init dest line address
+    sta vera_ctrl
+    stz vera_addrx_l
+    lda #>vera_text_base
+    sta vera_addrx_m
+    lda #vera_incr_1_h
+    sta vera_addrx_h
+    lda #vera_addr1             ; Init  src line address
+    sta vera_ctrl
+    stz vera_addrx_l
+    clc
+    lda #>vera_text_base
+    adc mac+4
+    sta vera_addrx_m
+    lda #vera_incr_1_h
+    sta vera_addrx_h
+    sec
+    lda #60
+    sbc mac+4
+    tax                         ; Count of line moves
+_line:
+    ldy #80
+_char:
+    lda vera_data1
+    sta vera_data0
+    dey
+    bne _char
+    lda #vera_addr0             ; Update dest
+    sta vera_ctrl
+    stz vera_addrx_l
+    inc vera_addrx_m
+    lda #vera_addr1             ; Update src
+    sta vera_ctrl
+    stz vera_addrx_l
+    inc vera_addrx_m
+    dex
+    bne _line
+    rts

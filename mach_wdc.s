@@ -8,6 +8,22 @@ mach_init1:
     jsr con_init
     rts
 
+mach_hex_char:
+    tsx
+    lda $101,x
+    and #$0f
+    cmp #10
+    bcc _is_digit
+    clc
+    adc #55
+    bra _done
+_is_digit:
+    clc
+    adc #$30
+_done:
+    sta $101,x
+    jmp do_next
+
 mach_dbg:
     ;; A has low order of new IP
     jsr set_led

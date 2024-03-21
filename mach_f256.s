@@ -111,7 +111,7 @@ mach_init1:
 
     lda #3                      ; Cursor enable, rate = 1/2s
     sta $d010                   ; Cursor control
-    lda #64                     ; Cursor character
+    lda #$8d                    ; Cursor character
     sta $d012
     stz $d014                   ; Cursor to 0,0
     stz $d015
@@ -121,6 +121,22 @@ mach_init1:
     pla
     sta 1
     rts
+
+mach_hex_char:
+    tsx
+    lda $101,x
+    and #$0f
+    cmp #10
+    bcc _is_digit
+    clc
+    adc #55
+    bra _done
+_is_digit:
+    clc
+    adc #$30
+_done:
+    sta $101,x
+    jmp do_next
 
 screenfill:
     ldx #0
@@ -365,6 +381,8 @@ do_bs:
     bpl _do_erase
     inc screen_x
 _do_erase:
+    ldx screen_x
+    ldy screen_y
     jsr gotoxy
     ldx screen_x
     ldy screen_y

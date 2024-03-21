@@ -196,6 +196,16 @@ CODE emit
     pla
 END-CODE
 
+CODE at-xy
+    pla
+    tay
+    pla
+    pla
+    tax
+    pla
+    jsr     gotoxy
+END-CODE
+
 CODE page
     lda #255                    ; Hopefully worst-case terminal size
     jsr scroll_up
@@ -468,6 +478,30 @@ CODE or
     sta $104,x
     pla
     pla
+END-CODE
+
+CODE lshift
+    pla
+    tay
+    pla
+    tsx
+_again:
+    asl $101,x
+    rol $102,x
+    dey
+    bne _again
+END-CODE
+
+CODE rshift
+    pla
+    tay
+    pla
+    tsx
+_again:
+    lsr $102,x
+    ror $101,x
+    dey
+    bne _again
 END-CODE
 
 CODE =
@@ -1648,12 +1682,48 @@ next_immediate
     cr ." [2] Done. " cr
 ;
 
+: hex
+    0x10 base !
+;
+
+: decimal
+    0x0a base !
+;
+
+: octal
+    0x08 base !
+;
+
+CODE hex_char
+    jmp mach_hex_char
+END-CODE
+
+: char_block
+    16 0 do
+        16 0 do
+            i 0= if
+                i j 2 + at-xy
+                j hex_char emit
+            then
+
+            j 0= if
+                i 2 + 0 at-xy
+                i hex_char emit
+            then
+            i 2 + j 2 + at-xy
+            i j 4 lshift + emit
+        loop
+    loop
+;
+
 : cold
     here0
     10 base !
     0 >in !
     init_serial
     core_dict @ dict_start !
+
+    char_block 0 20 at-xy
 
     ." HOLDFORTH 0.1" cr
     quit
