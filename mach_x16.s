@@ -204,6 +204,8 @@ dispchar:
     bcc _done
     lda #1
     jsr scroll_up
+    ldx #0
+    ldy #59
 _done:
     jmp gotoxy
 
@@ -287,6 +289,8 @@ _in_bounds:
     tax                         ; Count of line moves
 _line:
     ldy #80
+    cpx #0
+    beq _do_blanks
 _char:
     lda vera_data1
     sta vera_data0
@@ -302,4 +306,28 @@ _char:
     inc vera_addrx_m
     dex
     bne _line
+_do_blanks:
+    lda #vera_addr0
+    sta vera_ctrl
+    lda #vera_incr_1_h
+    sta vera_addrx_h
+    sec
+    lda #60
+    sbc mac+4
+    tax                         ; X now has current blanking line
+_blank_line:
+    txa
+    clc
+    adc #>vera_text_base
+    sta vera_addrx_m
+    stz vera_addrx_l
+    ldy #80
+    lda #32
+_blank_char:
+    sta vera_data0
+    dey
+    bne _blank_char
+    inx
+    cpx #60
+    bne _blank_line
     rts
