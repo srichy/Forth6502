@@ -487,3 +487,6 @@ _blank_char:
     dex
     bne _blank_line
     rts
+
+pagesize:
+    rts

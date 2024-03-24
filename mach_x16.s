@@ -331,3 +331,6 @@ _blank_char:
     cpx #60
     bne _blank_line
     rts
+
+pagesize:
+    rts

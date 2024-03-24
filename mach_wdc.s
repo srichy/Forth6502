@@ -1,5 +1,8 @@
 mach_init0:
     sei
+    ldx #80
+    ldy #24
+    jsr pagesize
     rts
 
 mach_init1:
@@ -191,8 +194,42 @@ done:
     sta $104,x
     jmp do_next
 
-gotoxy:
+pagesize:
+    sty size_y
+    stx size_x
     rts
 
+    ;; cup=\E[%i%p1%d;%p2%dH
+    ;; cursor position by sending
+    ;; ESC[row;colH
+    ;; where row = y, col = x
+gotoxy:
+    phx
+    phy
+    lda #27                     ;ESC
+    jsr con_tx
+    lda #"["
+    jsr con_tx
+    pla
+    jsr prt_dec_num
+    lda #";"
+    jsr con_tx
+    pla
+    jsr prt_dec_num
+    lda #"H"
+    jsr con_tx
+    rts
+
+clear_seq:  .byte 27,"[","H",27,"[","J",0
 scroll_up:
+    cmp #255
+    bne _done
+    ldx #0
+_another:
+    lda clear_seq,x
+    beq _done
+    jsr con_tx
+    inx
+    bra _another
+_done:
     rts

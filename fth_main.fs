@@ -206,6 +206,16 @@ CODE at-xy
     jsr     gotoxy
 END-CODE
 
+CODE pagesize
+    pla
+    tay
+    pla
+    pla
+    tax
+    pla
+    jsr     pagesize
+END-CODE
+
 CODE page
     lda #255                    ; Hopefully worst-case terminal size
     jsr scroll_up
@@ -1697,6 +1707,18 @@ next_immediate
 CODE hex_char
     jmp mach_hex_char
 END-CODE
+
+CODE dec_num
+    pla
+    jsr prt_dec_num
+    pla
+END-CODE
+
+: char_filt ( c -- c )
+    dup 32 < over 126 > or if
+        drop 46
+    then
+;
 
 : char_block
     16 0 do

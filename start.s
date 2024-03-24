@@ -25,6 +25,11 @@ cfp:    .byte ?
     dividend = mac+2
 
     .if targ=="wdc"
+    ;; Still in zero page
+size_x: .byte ?
+size_y: .byte ?
+screen_x: .byte ?
+screen_y: .byte ?
     * = $200
     .elsif targ=="x16"
 
@@ -85,6 +90,64 @@ do_next:
     adc #0
     sta ip+1
     jmp wjmp
+
+    ;; Turn A into three ASCII digit bytes
+    ;; print each in order.
+prt_dec_num:
+    pha                         ;Save the number for repeated ops
+    ldx #0
+    stx mac+4
+_do_100:
+    sec
+    sbc #100
+    bcc _done_100
+    pha
+    clc
+    lda mac+4
+    adc #100
+    sta mac+4
+    inx
+    pla
+    bra _do_100
+_done_100:
+    cpx #0
+    beq _do_10s
+    clc
+    txa
+    adc #$30
+    jsr con_tx
+_do_10s:
+    pla
+    sec
+    sbc mac+4
+    pha
+    ldx #0
+    stx mac+4
+_do_10:
+    sec
+    sbc #10
+    bcc _done_10
+    clc
+    pha
+    lda mac+4
+    adc #10
+    sta mac+4
+    inx
+    pla
+    bra _do_10
+_done_10:
+    clc
+    txa
+    adc #$30
+    jsr con_tx
+_do_1s:
+    pla
+    sec
+    sbc mac+4
+    clc
+    adc #$30
+    jsr con_tx
+    rts
 
     .if targ=="wdc"
     .include "mach_wdc.s"
