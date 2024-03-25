@@ -70,8 +70,20 @@ dispchar:
     iny
     sty screen_x
     cpy #80
-    bne _done
+    bcc _done
     stz screen_x
+
+    lda screen_y
+    cmp #59
+    bcc _inc_y
+    lda #1
+    jsr scroll_up
+    ldx screen_x
+    ldy screen_y
+    jsr gotoxy
+    bra _done
+_inc_y:
+
     inc screen_y
     clc
     lda scrptr
@@ -145,7 +157,10 @@ screenfill:
 _d:
     jsr dispchar
     ldy screen_y
-    cpy #60
+    cpy #59
+    bne _d
+    ldx screen_x
+    cpx #79
     bne _d
     rts
 
