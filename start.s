@@ -151,16 +151,18 @@ _do_1s:
 
     .if targ=="wdc"
     .include "mach_wdc.s"
+    .include "fth_main_wdc.s"
     .endif                      ; targ=="wdc"
 
     .if targ=="x16"
     .include "mach_x16.s"
+    .include "fth_main_x16.s"
     .endif                      ; targ=="x16"
 
     .if targ=="f256"
     .include "mach_f256.s"
+    .include "fth_main_f256.s"
     .endif                      ; targ=="x16"
 
-    .include "fth_main.s"
 
 edata: .addr *

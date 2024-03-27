@@ -6,25 +6,33 @@ TARGETS = wdcForth x16Forth.prg f256Forth.pgx f256Forth.bin f256Forth.pgz
 
 all: $(TARGETS)
 
-SRCS = start.s fth_main.s $(wildcard mach_*.s)
+SRC_WDC = start.s fth_main_wdc.s mach_wdc.s
+SRC_X16 = start.s fth_main_x16.s mach_x16.s
+SRC_F256 = start.s fth_main_f256.s mach_f256.s
 
 clean:
-	rm -f $(TARGETS) *.o *.map *.lis
+	rm -f $(TARGETS) *.o *.map *.lis fth_main_*.s
 
-wdcForth: $(SRCS)
+wdcForth: $(SRC_WDC)
 	$(AS) $(ASFLAGS) -D 'targ="wdc"' --nostart -o $@ -L $@.lis --map $@.map $<
 
-fth_main.s: fth_main.fs $(RFC)
-	$(RFC) --arch ca6502 fth_main.fs > $@ || rm fth_main.s
+fth_main_wdc.s: fth_main.fs $(RFC)
+	$(RFC) --arch ca6502 -d ARCH_WDC fth_main.fs > $@ || rm fth_main.s
 
-x16Forth.prg: $(SRCS)
+fth_main_x16.s: fth_main.fs $(RFC)
+	$(RFC) --arch ca6502 -d ARCH_X16 fth_main.fs > $@ || rm fth_main.s
+
+fth_main_f256.s: fth_main.fs $(RFC)
+	$(RFC) --arch ca6502 -d ARCH_F256 fth_main.fs > $@ || rm fth_main.s
+
+x16Forth.prg: $(SRC_X16)
 	$(AS) $(ASFLAGS) -D 'targ="x16"' --cbm-prg -o $@ -L $@.lis --map $@.map $<
 
-f256Forth.pgx: $(SRCS)
+f256Forth.pgx: $(SRC_F256)
 	$(AS) $(ASFLAGS) -D 'targ="f256"' --c256-pgx -o $@ -L $@.lis --map $@.map $<
 
-f256Forth.pgz: $(SRCS)
+f256Forth.pgz: $(SRC_F256)
 	$(AS) $(ASFLAGS) -D 'targ="f256"' --c256-pgz --output-exec=start -o $@ -L $@.lis --map $@.map $<
 
-f256Forth.bin: $(SRCS)
+f256Forth.bin: $(SRC_F256)
 	$(AS) $(ASFLAGS) -D 'targ="f256"' --nostart -o $@ -L $@.lis --map $@.map $<
