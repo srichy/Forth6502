@@ -3,8 +3,9 @@
 *.map
 *.prg
 *.pgx
+*.pgz
 *.sh
 wdcForth
-fth_main.s
+fth_main*.s
 wdc.sh
 x16.sh
