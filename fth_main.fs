@@ -1300,8 +1300,18 @@ next_immediate
     then
 ;
 
+next_immediate
 : ."
-    34 word count type
+    34 word count
+    state @ 0= if
+        type
+    else
+        ['] branch , dup here + 1 cells + ,
+        swap here 2 pick move here over allot
+        ['] lit , ,
+        ['] lit , ,
+        ['] type ,
+    then
 ;
 
 : cr ( -- )
