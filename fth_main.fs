@@ -26,6 +26,9 @@ NEXT .macro
 w_core_dict    .HIGH_W 9, "core_dict", w_const, , "0"
     .addr dict_head
 
+source_id_stk:   .fill 16      ;8 addresses
+source_id_sp:    .word 0
+
     ;; Byte is in A.  Put at here and advance here
 puthere:
     sta (here_store)
@@ -1250,6 +1253,7 @@ END-CODE
             word_space append_counted
             1 >in +!
     repeat
+    1 >in +! ( Skip at least one closing delim )
 
     ( delim -- )
     drop
@@ -1257,7 +1261,9 @@ END-CODE
 ;
 
 VARIABLE tib 132 XALLOT
-VARIABLE word_space 80 XALLOT
+VARIABLE word_space 128 XALLOT
+128 CONSTANT squote_size
+VARIABLE squote_store 128 XALLOT
 
 12 CONSTANT pic_num_size
 VARIABLE pic_num_off
@@ -1273,6 +1279,22 @@ VARIABLE dict_start
 
 : source
     ticksource 2@
+;
+
+next_immediate
+: s" ( -- c-addr u )
+    34 word ( get the next input until a quote char )
+    state @ 0= if
+        count squote_size min dup >r
+        squote_store swap move
+        squote_store r>
+    else
+        abort" Compile-time s-quote not yet supported"
+    then
+;
+
+: ."
+    34 word count type
 ;
 
 : cr ( -- )
@@ -1752,3 +1774,9 @@ END-CODE
     depth
     bye
 ;
+
+[DEFINED] ARCH_F256 [IF]
+
+include f256_files.fs
+
+[THEN]
