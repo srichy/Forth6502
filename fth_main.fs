@@ -1211,6 +1211,7 @@ END-CODE
         over =
         over 10 = or
         over 13 = or
+        over 0  = or ( F256k files are padded with NULs )
         swap  9 = or
     else
         =
