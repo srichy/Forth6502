@@ -391,8 +391,10 @@ END-CODE
 
 CODE pick
     tsx
-    lda $101,x
-    asl
+    txa
+    asl $101,x
+    clc
+    adc $101,x
     tay
     lda $103,y
     sta $101,x
@@ -1284,13 +1286,17 @@ VARIABLE dict_start
 
 next_immediate
 : s" ( -- c-addr u )
-    34 word ( get the next input until a quote char )
+    34 word count ( get the next input until a quote char )
     state @ 0= if
-        count squote_size min dup >r
+        squote_size min dup >r
         squote_store swap move
         squote_store r>
     else
-        abort" Compile-time s-quote not yet supported"
+        ( Behavior is analogous to LITERAL )
+        ['] branch , dup here + 1 cells + ,
+        swap here 2 pick move here over allot
+        ['] lit , ,
+        ['] lit , ,
     then
 ;
 
@@ -1326,6 +1332,12 @@ next_immediate
             r> r> 6 + @
     repeat
     0
+;
+
+: '
+    bl word find 0= if
+        drop 0
+    then
 ;
 
 : check_sign ( c-addr n -- 1|-1 c-addr n )
