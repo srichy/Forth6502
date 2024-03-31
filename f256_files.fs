@@ -4,6 +4,8 @@
     ( This does nothing for now )
 ;
 
+VARIABLE tb 100 XALLOT
+
 0 CONSTANT R/O
 1 CONSTANT R/W
 2 CONSTANT W/O
@@ -99,11 +101,11 @@ END-CODE
 ;
 
 : file-position ( fileid - ud ior )
-    0x0 0x0 0xffff ( not supported )
+    abort" FILE-POSITION not yet supported"
 ;
 
 : file-size ( fileid - ud ior )
-    0x0 0x0 0xffff ( not supported )
+    abort" FILE-SIZE not yet supported"
 ;
 
 : include-file ( i*x fileid -- j*x )
@@ -120,21 +122,23 @@ END-CODE
 
 ( c-addr u1 fileid -- u2 ior )
 CODE read-file
-    pla
+    pla                         ; fileid:L
     sta kernel.args.file.read.stream
-    pla
-    pla
+    pla                         ; fileid:H
+    pla                         ; u1:L
     sta kernel.args.file.read.buflen
-    pla
+    pla                         ; u1:H
     jsr kernel.File.Read
     bcc _success
+    pla                         ; c-addr:L
+    pla                         ; c-addr:H
     lda #0
-    pha
-    pha
+    pha                         ; u2:H
+    pha                         ; u2:L
     lda #$ff
-    pha
-    pha
-    jsr _done
+    pha                         ; ior:H
+    pha                         ; ior:L
+    bra _done
 _success:                       ; Wait for file read event
     lda kernel.args.events.pending
     bpl _success
@@ -146,30 +150,94 @@ _success:                       ; Wait for file read event
     cmp #kernel.event.file.EOF
     bne _success                ; Only read responses for now
     ;; We have hit EOF
-    pla
-    pla
+    pla                         ; c-addr:L
+    pla                         ; c-addr:H
     lda #0
-    pha
-    pha
-    pha
-    pha
+    pha                         ; u2:H
+    pha                         ; u2:L
+    pha                         ; ior:H
+    pha                         ; ior:L
     bra _done
 _copy_read_data:
-    pla
+    pla                         ; c-addr:L
     sta kernel.args.buf
-    pla
+    pla                         ; c-addr:H
     sta kernel.args.buf+1
     lda #0
-    pha
+    pha                         ; u2:H
     lda event.file.data.read
-    pha
+    pha                         ; u2:L
     sta kernel.args.buflen
     jsr kernel.ReadData
     lda #0
-    pha
-    pha
+    pha                         ; ior:H
+    pha                         ; ior:L
 _done:
 END-CODE
+
+( A -1 means EOF )
+: read-byte ( fileid -- b )
+    >r here 1 r> read-file if
+        abort" READ-BYTE: Error reading file"
+    then
+    0= if
+        -1
+    else
+        here c@
+    then
+;
+
+( First version is going to be sloooooow. )
+: read-line ( c-addr u1 fileid -- u2 flag ior )
+    2 pick >r ( save original buffer addr )
+    >r over + swap ( end-addr cur-addr -- ; R: start-addr fileid )
+    begin
+        2dup > ( e c f -- ; enough room for another? )
+        r@ read-byte swap over -1 <> and ( e c b f -- ; not EOF? )
+        over 10 <> and ( not LF? )
+        over 13 <> and ( not CR? )
+    while
+        over c!
+        1+
+    repeat
+    r> drop ( fileid no longer needed )
+    ( end-addr cur-addr c )
+    -1 = if ( We hit EOF )
+        dup r> = if ( At EOF, and we read nothing )
+            2drop 0 0 0
+            exit
+        then
+    then
+    r> - nip -1 0
+;
+
+( ud fileid -- ior )
+CODE reposition-file
+    pla
+    sta kernel.args.file.seek.stream
+    pla
+    pla
+    sta kernel.args.file.seek.position+2
+    pla
+    sta kernel.args.file.seek.position+3
+    pla
+    sta kernel.args.file.seek.position+0
+    pla
+    sta kernel.args.file.seek.position+1
+    jsr kernel.File.Seek
+    bcc _success
+    lda #$ff
+    bra _done
+_success:
+    lda #0
+_done:
+    pha
+    pha
+END-CODE
+
+: resize-file ( ud fileid -- ior )
+    abort" RESIZE-FILE not yet supported"
+;
 
 ( c-addr u fileid -- ior )
 CODE write-file
@@ -193,3 +261,37 @@ _done:
     pha
     pha
 END-CODE
+
+: write-line ( c-addr u fileid -- ior )
+    abort" READ-LINE not yet supported"
+;
+
+( File-Access extension words )
+
+: file-status ( c-addr u -- x ior )
+    abort" FILE-STATUS not yet supported"
+;
+
+: flush-file ( fileid -- ior )
+    abort" FLUSH-FILE not yet supported"
+;
+
+: include ( i*x "name" -- j*x )
+    abort" INCLUDE not yet supported"
+;
+
+: refill ( -- flag )
+    abort" REFILL not yet supported"
+;
+
+: rename-file ( c-addr1 u1 c-addr2 u2 -- ior )
+    abort" RENAME-FILE not yet supported"
+;
+
+: require ( i*x "name" -- i*x )
+    abort" REQUIRE not yet supported"
+;
+
+: required ( i*x c-addr u -- i*x )
+    abort" REQUIRED not yet supported"
+;
