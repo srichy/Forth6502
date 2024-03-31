@@ -5,7 +5,7 @@ HEADLESSCODE
 HIGH_W .macro name_len, name, act=w_enter, flgs=0, prev
 dict:
     .byte (\flgs << 7) | len(\name)
-    .text format("%-5s", \name[:5])
+    .text format("%-7s", \name[:7])
     .addr \prev
 cfa:
     jmp \act                  ; CFA
@@ -14,7 +14,7 @@ cfa:
 CODE_W .macro name_len, name, flgs=0, prev
 dict:
     .byte (\flgs << 7) | len(\name)
-    .text format("%-5s", \name[:5])
+    .text format("%-7s", \name[:7])
     .addr \prev
 cfa:
     .endmacro                   ; PFA implicit, follows macro
@@ -146,8 +146,6 @@ CODE exit
     jsr rpop1
 END-CODE
 
-132 CONSTANT tiblen
-
 CODE p0
     ldx #$ff
     txs
@@ -266,8 +264,8 @@ END-CODE
 
 : cstr_cmp ( c-addr1 dict_start -- f )
     dup c@ 0x7f and rot dup c@ rot over = if
-        ( Limit to 5 significant chars )
-        5 min
+        ( Limit to 7 significant chars )
+        7 min
         0 do
             1+ swap 1+
             ( case-insensitive search for ASCII only! )
@@ -1263,6 +1261,7 @@ END-CODE
     word_space
 ;
 
+132 CONSTANT tiblen
 VARIABLE tib 132 XALLOT
 VARIABLE word_space 128 XALLOT
 128 CONSTANT squote_size
@@ -1332,14 +1331,14 @@ next_immediate
     while ( c-addr dict_start -- )
             2dup >r >r ( c-addr dict_start -- ) ( R: dict_start c-addr -- )
             cstr_cmp if
-                r> drop r> dup 8 + swap c@ 128 and if
+                r> drop r> dup 10 + swap c@ 128 and if
                     1
                 else
                     -1
                 then
                 exit
             then
-            r> r> 6 + @
+            r> r> 8 + @
     repeat
     0
 ;
@@ -1481,7 +1480,7 @@ next_immediate
 
 : create ( "word" -- here )
     here
-    bl word 6 cstr_to_here
+    bl word 8 cstr_to_here
     dict_start @ ,
     0x4c c, lit var ,
     dict_start !
@@ -1694,12 +1693,12 @@ next_immediate
 ;
 
 : print_name ( name-addr -- )
-    dup 1+ swap c@ 0x7f and dup 6 < if
+    dup 1+ swap c@ 0x7f and dup 8 < if
         type
     else
-        ( Name is longer than 5 chars; show length )
+        ( Name is longer than 7 chars; show length )
         <# 62 hold #s 60 hold #> type
-        5 type
+        7 type
     then
 ;
 
@@ -1712,7 +1711,7 @@ next_immediate
     while ( dict_next -- )
         dup >r ( dict_start -- ) ( R: dict_start -- )
         print_name bl emit
-        r> 6 + @
+        r> 8 + @
     repeat
 ;
 
