@@ -6,9 +6,9 @@ TARGETS = wdcForth x16Forth.prg f256Forth.pgx f256Forth.bin f256Forth.pgz
 
 all: $(TARGETS)
 
-SRC_WDC = start.s fth_main.fs fth_main_wdc.s mach_wdc.s
-SRC_X16 = start.s fth_main.fs fth_main_x16.s mach_x16.s
-SRC_F256 = start.s fth_main.fs fth_main_f256.s mach_f256.s f256_files.fs
+SRC_WDC = start.s fth_main.fs mach_wdc.s
+SRC_X16 = start.s fth_main.fs mach_x16.s
+SRC_F256 = start.s fth_main.fs mach_f256.s f256_files.fs
 
 clean:
 	rm -f $(TARGETS) *.o *.map *.lis fth_main_*.s
