@@ -1097,3 +1097,10 @@ CODE dec_num
     jsr prt_dec_num
     pla
 END-CODE
+
+8 CONSTANT HDR_SIZE
+7 CONSTANT MAX_NM_LEN
+
+: dict_to_cfa ( entry-addr -- cfa-addr )
+    HDR_SIZE + 1 cells +
+;

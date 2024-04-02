@@ -54,8 +54,8 @@ include fth_core_6502.fs
 
 : cstr_cmp ( c-addr1 dict_start -- f )
     dup c@ 0x7f and rot dup c@ rot over = if
-        ( Limit to 7 significant chars )
-        7 min
+        ( Limit to MAX_NM_LEN significant chars )
+        MAX_NM_LEN min
         0 do
             1+ swap 1+
             ( case-insensitive search for ASCII only! )
@@ -249,14 +249,14 @@ next_immediate
     while ( c-addr dict_start -- )
             2dup >r >r ( c-addr dict_start -- ) ( R: dict_start c-addr -- )
             cstr_cmp if
-                r> drop r> dup 10 + swap c@ 128 and if
+                r> drop r> dup dict_to_cfa swap c@ 128 and if
                     1
                 else
                     -1
                 then
                 exit
             then
-            r> r> 8 + @
+            r> r> HDR_SIZE + @
     repeat
     0
 ;
@@ -398,7 +398,7 @@ next_immediate
 
 : create ( "word" -- here )
     here
-    bl word 8 cstr_to_here
+    bl word HDR_SIZE cstr_to_here
     dict_start @ ,
     0x4c c, lit var ,
     dict_start !
@@ -620,12 +620,12 @@ next_immediate
 ;
 
 : print_name ( name-addr -- )
-    dup 1+ swap c@ 0x7f and dup 8 < if
+    dup 1+ swap c@ 0x7f and dup MAX_NM_LEN 1+ < if
         type
     else
-        ( Name is longer than 7 chars; show length )
+        ( Name is longer than MAX_NM_LEN chars; show length )
         <# 62 hold #s 60 hold #> type
-        7 type
+        MAX_NM_LEN type
     then
 ;
 
@@ -638,7 +638,7 @@ next_immediate
     while ( dict_next -- )
         dup >r ( dict_start -- ) ( R: dict_start -- )
         print_name bl emit
-        r> 8 + @
+        r> HDR_SIZE + @
     repeat
 ;
 
