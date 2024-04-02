@@ -156,41 +156,6 @@ CODE r0
     sta rsp
 END-CODE
 
-: . ( x -- )
-    <# #s #> type
-;
-
-: <# ( -- )
-    pic_num_size pic_num_off !
-;
-
-: hold ( n -- )
-    -1 pic_num_off +!
-    pic_num pic_num_off @ + c!
-;
-
-: # ( ud1 -- ud2 )
-    base @ /mod swap ( -- ud2 rem )
-    dup 10 < if
-        0x30 + hold
-    else
-        55 + hold
-    then
-;
-
-: #s ( ud1 -- ud2 )
-    begin
-        #
-        dup 0=
-    until
-;
-
-: #> ( xd -- c-addr u )
-    drop
-    pic_num pic_num_off @ +
-    pic_num_size pic_num_off @ -
-;
-
 CODE emit
     pla
     jsr     con_tx
@@ -250,36 +215,6 @@ CODE fill
     dex
     bpl -
 END-CODE
-
-: type ( c-addr u -- )
-    0 do
-        dup i + c@ emit
-    loop
-    drop
-;
-
-: count ( c-addr1 -- c-addr2 u )
-    dup 1+ swap c@
-;
-
-: cstr_cmp ( c-addr1 dict_start -- f )
-    dup c@ 0x7f and rot dup c@ rot over = if
-        ( Limit to 7 significant chars )
-        7 min
-        0 do
-            1+ swap 1+
-            ( case-insensitive search for ASCII only! )
-            dup c@ 0xdf and rot dup c@ 0xdf and rot <> if
-                2drop unloop 0 exit
-            then
-        loop
-        2drop
-        -1
-    else
-        2drop drop
-        0
-    then
-;
 
 ( -- c )
 CODE key
@@ -650,14 +585,6 @@ set_flag
     pla
 END-CODE
 
-: >=
-  < invert
-;
-
-: <=
-  > invert
-;
-
 CODE +
     tsx
     clc
@@ -706,14 +633,6 @@ END-CODE
 CODE *
     jmp ll_mult
 END-CODE
-
-: /
-    /mod nip
-;
-
-: mod
-    /mod drop
-;
 
 CODE /mod
     jmp ll_slash_mod
@@ -1169,6 +1088,99 @@ CODE get_bs
     pha
 END-CODE
 
+CODE hex_char
+    jmp mach_hex_char
+END-CODE
+
+CODE dec_num
+    pla
+    jsr prt_dec_num
+    pla
+END-CODE
+
+( MOVE CODE HERE )
+
+: . ( x -- )
+    <# #s #> type
+;
+
+: <# ( -- )
+    pic_num_size pic_num_off !
+;
+
+: hold ( n -- )
+    -1 pic_num_off +!
+    pic_num pic_num_off @ + c!
+;
+
+: # ( ud1 -- ud2 )
+    base @ /mod swap ( -- ud2 rem )
+    dup 10 < if
+        0x30 + hold
+    else
+        55 + hold
+    then
+;
+
+: #s ( ud1 -- ud2 )
+    begin
+        #
+        dup 0=
+    until
+;
+
+: #> ( xd -- c-addr u )
+    drop
+    pic_num pic_num_off @ +
+    pic_num_size pic_num_off @ -
+;
+
+: type ( c-addr u -- )
+    0 do
+        dup i + c@ emit
+    loop
+    drop
+;
+
+: count ( c-addr1 -- c-addr2 u )
+    dup 1+ swap c@
+;
+
+: cstr_cmp ( c-addr1 dict_start -- f )
+    dup c@ 0x7f and rot dup c@ rot over = if
+        ( Limit to 7 significant chars )
+        7 min
+        0 do
+            1+ swap 1+
+            ( case-insensitive search for ASCII only! )
+            dup c@ 0xdf and rot dup c@ 0xdf and rot <> if
+                2drop unloop 0 exit
+            then
+        loop
+        2drop
+        -1
+    else
+        2drop drop
+        0
+    then
+;
+
+: >=
+  < invert
+;
+
+: <=
+  > invert
+;
+
+: /
+    /mod nip
+;
+
+: mod
+    /mod drop
+;
+
 : do_bs ( a-end a-cur a-beg -- a-end a-cur 0 ; R: +n1 a-beg -- )
     over < if
         get_bs emit
@@ -1536,6 +1548,15 @@ next_immediate
     until
 ;
 
+: evaluate ( i*x c-addr u -- j*x )
+    ( save-input )
+    ( store -1 in source-id )
+    ticksource 2!
+    0 >in !
+    interpret
+    ( restore-input )
+;
+
 : quit ( -- ) ( R: i*x -- )
     r0
 
@@ -1748,16 +1769,6 @@ next_immediate
     0x08 base !
 ;
 
-CODE hex_char
-    jmp mach_hex_char
-END-CODE
-
-CODE dec_num
-    pla
-    jsr prt_dec_num
-    pla
-END-CODE
-
 : char_filt ( c -- c )
     dup 32 < over 126 > or if
         drop 46
@@ -1795,6 +1806,18 @@ END-CODE
     quit
     depth
     bye
+;
+
+: restore-input ( xn ... x1 n -- flag )
+    abort" RESTORE-INPUT not yet supported"
+;
+
+: save-input ( -- xn ... x1 n )
+    abort" SAVE-INPUT not yet supported"
+;
+
+: source-id ( -- 0 | -1 | fileid )
+    abort" SOURCE-ID not yet supported"
 ;
 
 [DEFINED] ARCH_F256 [IF]
