@@ -1,3 +1,117 @@
+( -*- forth-asm -*- )
+
+HEADLESSCODE
+
+HIGH_W .macro name_len, name, act=w_enter, flgs=0, prev
+dict:
+    .byte (\flgs << 7) | len(\name)
+    .text format("%-7s", \name[:7])
+    .addr \prev
+cfa:
+    jmp \act                  ; CFA
+    .endmacro                   ; PFA implicit, follows macro
+
+CODE_W .macro name_len, name, flgs=0, prev
+dict:
+    .byte (\flgs << 7) | len(\name)
+    .text format("%-7s", \name[:7])
+    .addr \prev
+cfa:
+    .endmacro                   ; PFA implicit, follows macro
+
+NEXT .macro
+    jmp do_next
+    .endmacro
+
+w_core_dict    .HIGH_W 9, "core_dict", w_const, , "0"
+    .addr dict_head
+
+source_id_stk:   .fill 16      ;8 addresses
+source_id_sp:    .word 0
+
+    ;; Byte is in A.  Put at here and advance here
+puthere:
+    sta (here_store)
+    inc here_store
+    bne +
+    inc here_store+1
++   rts
+
+rpush1
+    ldx rsp
+    dex
+    dex
+    stx rsp
+    rts
+
+rpop1
+    ldx rsp
+    inx
+    inx
+    stx rsp
+    rts
+
+rpush2
+    php
+    lda rsp
+    sec
+    sbc #4
+    sta rsp
+    plp
+    rts
+
+rpop2
+    lda rsp
+    clc
+    adc #4
+    sta rsp
+    rts
+
+w_enter .block
+cfa
+    ;jsr    debug_dump
+    jsr rpush1
+    lda ip
+    sta rstk+1,x
+    lda ip+1
+    sta rstk+2,x
+    clc
+    lda w
+    adc #3
+    sta ip
+    lda w+1
+    adc #0
+    sta ip+1
+    .NEXT
+  .endblock
+
+w_var .block
+cfa
+    lda w
+    clc
+    adc #3
+    tax
+    lda w+1
+    adc #0
+    pha
+    txa
+    pha
+    .NEXT
+  .endblock
+
+w_const .block
+cfa
+    ldy #4
+    lda (w),y
+    pha
+    dey
+    lda (w),y
+    pha
+    .NEXT
+  .endblock
+
+END-CODE
+
 next_immediate
 CODE brk
     brk
