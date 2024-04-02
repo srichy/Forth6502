@@ -6,6 +6,12 @@ include fth_core_6502.fs
 
 [THEN]
 
+[DEFINED] ARCH_65816 [IF]
+
+include fth_core_65816.fs
+
+[THEN]
+
 : . ( x -- )
     <# #s #> type
 ;
