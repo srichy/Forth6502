@@ -9,8 +9,8 @@ mach_dbg:
     rts
 
 mach_hex_char:
-    tsx
-    lda $101,x
+    .a8
+    lda 1,s
     cmp #10
     bcc _is_digit
     sec
@@ -20,10 +20,11 @@ _is_digit:
     clc
     adc #$30
 _done:
-    sta $101,x
+    sta 1,s
     jmp do_next
 
 con_init:
+    .ax8
     jsr $ff81                   ; CINT
     lda #$0f                    ; ISO mode
     sta screen_y                ; force recompute in gotoxy
@@ -34,10 +35,12 @@ con_init:
     rts                         ; Using C64-compatible kernal chrin/chrout
 
 con_tx0:
+    .ax8
     jsr $FFD2                   ; C64 CHROUT
     rts
 
 con_tx:
+    .ax8
     cmp #20                      ; backspace
     bne _maybe_13
     jmp do_bs
@@ -64,114 +67,73 @@ _doout
     jmp dispchar
 
 con_rx:
+    .ax8
 -   jsr $FFE4                   ; C64 GETIN
     cmp #0
     beq -
     rts
 
 raw_bs:
+    .a8
     lda #20
     rts
 
 ll_mult:
-    tsx
-    lda $103,x
-    stz $103,x
+    .ax16
+    lda 3,s
     sta mac
-    lda $104,x
-    stz $104,x
-    sta mac+1
-    ldy #16
-again
-    ;; Shift multiplier 1 bit right and check for carry
-    lda $102,x
-    lsr
-    sta $102,x
-    lda $101,x
-    ror
-    sta $101,x
-    bcc skip_add
-    ;; Carry set. Add multiplicant to accumulator
+    lda 1,s
+    sta mac+2
+    lda #0
+_again
+    ldx mac
+    beq _done
+    lsr mac
+    bcc _skip_add
     clc
-    lda mac
-    adc $103,x
-    sta $103,x
-    lda mac+1
-    adc $104,x
-    sta $104,x
-skip_add
-    lda mac
-    asl
-    sta mac
-    lda mac+1
-    rol
-    sta mac+1
-    dey
-    bne again
-    pla
+    adc mac+2
+_skip_add
+    asl mac+2
+    bra _again
+_done
+    sta 3,s
     pla
     jmp do_next
 
 ll_slash_mod:
-    tsx
-    lda $101,x
-    sta divisor
-    lda $102,x
-    sta divisor+1
-    lda $103,x
-    sta dividend
-    lda $104,x
-    sta dividend+1
+    .ax16
     ;; Taken almost verbatim from the WDC 65816 6502 Programming Manual
-    lda #0
+    lda 3,s
     tax
-    pha
+    lda 1,s
+    stz quotient
     ldy #1
-    lda divisor
-    bmi div2
-div1:
+_div1:
+    asl a
+    bcs _div2
     iny
-    asl divisor
-    rol divisor+1
-    bmi div2
     cpy #17
-    bne div1
-div2:
+    bne _div1
+_div2:
+    ror a
+_div4:
+    pha
+    txa
     sec
-    lda dividend
-    sbc divisor
-    pha
-    lda dividend+1
-    sbc divisor+1
-    bcc div3
-    sta dividend+1
-    pla
-    sta dividend
-    pha
-div3:
-    pla
-    pla
-    rol
-    pha
-    txa
-    rol
+    sbc 1,s
+    bcc _div3
     tax
-    lsr divisor+1
-    ror divisor
-    dey
-    bne div2
-done:
+_div3:
+    rol quotient
     pla
-    tay
+    lsr a
+    dey
+    bne _div4
+_done:
     txa
-    tsx
-    sta $102,x
-    tya
-    sta $101,x
-    lda dividend
-    sta $103,x
-    lda dividend+1
-    sta $104,x
+    sta 3,s
+    lda quotient
+    sta 1,s
     jmp do_next
 
     vera_addrx_l = $9f20
@@ -191,6 +153,7 @@ screen_y: .byte ?
 scrptr: .addr ?
 
 dispchar:
+    .ax8
     sta vera_data0
     ldy screen_y
     inc screen_x
@@ -210,6 +173,7 @@ _done:
     jmp gotoxy
 
 gotoxy:
+    .ax8
     pha
     stx screen_x
     cpy screen_y
@@ -240,6 +204,7 @@ _add_col:
     rts
 
 do_bs:
+    .ax8
     dec screen_x
     bpl _do_erase
     inc screen_x
@@ -262,6 +227,7 @@ _do_erase:
     ;; mac2,3 == src
     ;; mac4 == scroll count
 scroll_up:
+    .ax8
     cmp #60
     bcc _in_bounds
     lda #60

@@ -6,6 +6,7 @@
 *.pgz
 *.sh
 wdcForth
+wdcForth16
 fth_main*.s
 wdc.sh
 x16.sh

@@ -1,5 +1,36 @@
     .cpu "65816"
 
+a16 .macro
+    .al
+    rep #$20
+    .endmacro
+a8  .macro
+    .as
+    sep #$20
+    .endmacro
+
+x16 .macro
+    .xl
+    rep #$10
+    .endmacro
+
+x8  .macro
+    .xs
+    sep #$10
+    .endmacro
+
+ax16 .macro
+    .al
+    .xl
+    rep #$30
+    .endmacro
+
+ax8 .macro
+    .as
+    .xs
+    sep #$30
+    .endmacro
+
     .if targ=="wdc"
     .include "wdc65c816sxb.inc"
     .elsif targ=="x16"
@@ -23,6 +54,7 @@ cfp:    .byte ?
 
     divisor = mac
     dividend = mac+2
+    quotient = mac+4
 
     .if targ=="wdc"
     ;; Still in zero page
@@ -53,10 +85,14 @@ scrptr: .addr ?
     .endif
 
 start:
+    clc
+    xce
+    .ax8                        ; 8-bit A,X for init
     ldx #$ff
     txs
     stx cfp
     jsr mach_init0
+    .ax8
     lda #$4c               ; jmp a opcode
     sta wjmp               ; Now we can do 'jmp wjmp' to get 'jmp (w)'
     ;; Init parameter stack
@@ -67,33 +103,27 @@ start:
     jsr mach_init1
     ;; Load IP with "cold"
     ;; Then fall through to "next"
-    lda #<w_cold.cfa
+    .ax16
+    lda #w_cold.cfa
     sta w
-    lda #>w_cold.cfa
-    sta w+1
     jmp wjmp
     ;; The following should never be reached
     bra start
 
 do_next:
-    ldy #1
+    .a16
     lda (ip)
     sta w
-    lda (ip),y
-    sta w+1
     jsr mach_dbg
-    clc
-    lda ip
-    adc #2
-    sta ip
-    lda ip+1
-    adc #0
-    sta ip+1
+    inc ip
+    inc ip
     jmp wjmp
 
     ;; Turn A into three ASCII digit bytes
     ;; print each in order.
 prt_dec_num:
+    php
+    .ax8
     pha                         ;Save the number for repeated ops
     ldx #0
     stx mac+4
@@ -147,21 +177,22 @@ _do_1s:
     clc
     adc #$30
     jsr con_tx
+    plp
     rts
 
     .if targ=="wdc"
     .include "mach_wdc_16.s"
-    .include "fth_main_wdc.s"
+    .include "fth_main_wdc_16.s"
     .endif                      ; targ=="wdc"
 
     .if targ=="x16"
     .include "mach_x16_16.s"
-    .include "fth_main_x16.s"
+    .include "fth_main_x16_16.s"
     .endif                      ; targ=="x16"
 
     .if targ=="f256"
     .include "mach_f256_16.s"
-    .include "fth_main_f256.s"
+    .include "fth_main_f256_16.s"
     .endif                      ; targ=="x16"
 
 

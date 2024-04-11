@@ -1,4 +1,5 @@
 mach_init0:
+    .ax8
     sei
     ldx #80
     ldy #24
@@ -6,14 +7,15 @@ mach_init0:
     rts
 
 mach_init1:
+    .a8
     lda #1
     jsr set_led
     jsr con_init
     rts
 
 mach_hex_char:
-    tsx
-    lda $101,x
+    .ax8
+    lda 1,s
     and #$0f
     cmp #10
     bcc _is_digit
@@ -24,7 +26,7 @@ _is_digit:
     clc
     adc #$30
 _done:
-    sta $101,x
+    sta 1,s
     jmp do_next
 
 mach_dbg:
@@ -33,6 +35,7 @@ mach_dbg:
     rts
 
 set_led:
+    .ax8
     pha                         ; Save selected LED(s)
     lda #00                     ; DDRA access
     sta PIA_A_CTRL
@@ -45,12 +48,14 @@ set_led:
     rts
 
 con_init:
+    .ax8
     ;; Set USB_CTRL_WR and USB_CTRL_RDb pins as OUTPUT; others as input
     lda #USB_CTRL_WR|USB_CTRL_RDb
     sta USB_CTRL_DDR
     rts
 
 con_tx:
+    .ax8
     pha
     lda #0
     sta USB_DATA_DDR
@@ -71,6 +76,7 @@ con_tx:
     rts
 
 con_rx:
+    .ax8
     lda #0
     sta USB_DATA_DDR
     lda #USB_CTRL_RXFb
@@ -90,111 +96,70 @@ con_rx:
     rts
 
 raw_bs:
+    .ax8
     lda #8
     rts
 
 ll_mult:
-    tsx
-    lda $103,x
-    stz $103,x
+    .ax16
+    lda 3,s
     sta mac
-    lda $104,x
-    stz $104,x
-    sta mac+1
-    ldy #16
-again
-    ;; Shift multiplier 1 bit right and check for carry
-    lda $102,x
-    lsr
-    sta $102,x
-    lda $101,x
-    ror
-    sta $101,x
-    bcc skip_add
-    ;; Carry set. Add multiplicant to accumulator
+    lda 1,s
+    sta mac+2
+    lda #0
+_again
+    ldx mac
+    beq _done
+    lsr mac
+    bcc _skip_add
     clc
-    lda mac
-    adc $103,x
-    sta $103,x
-    lda mac+1
-    adc $104,x
-    sta $104,x
-skip_add
-    lda mac
-    asl
-    sta mac
-    lda mac+1
-    rol
-    sta mac+1
-    dey
-    bne again
-    pla
+    adc mac+2
+_skip_add
+    asl mac+2
+    bra _again
+_done
+    sta 3,s
     pla
     jmp do_next
 
 ll_slash_mod:
-    tsx
-    lda $101,x
-    sta divisor
-    lda $102,x
-    sta divisor+1
-    lda $103,x
-    sta dividend
-    lda $104,x
-    sta dividend+1
+    .ax16
     ;; Taken almost verbatim from the WDC 65816 6502 Programming Manual
-    lda #0
+    lda 3,s
     tax
-    pha
+    lda 1,s
+    stz quotient
     ldy #1
-    lda divisor
-    bmi div2
-div1:
+_div1:
+    asl a
+    bcs _div2
     iny
-    asl divisor
-    rol divisor+1
-    bmi div2
     cpy #17
-    bne div1
-div2:
+    bne _div1
+_div2:
+    ror a
+_div4:
+    pha
+    txa
     sec
-    lda dividend
-    sbc divisor
-    pha
-    lda dividend+1
-    sbc divisor+1
-    bcc div3
-    sta dividend+1
-    pla
-    sta dividend
-    pha
-div3:
-    pla
-    pla
-    rol
-    pha
-    txa
-    rol
+    sbc 1,s
+    bcc _div3
     tax
-    lsr divisor+1
-    ror divisor
-    dey
-    bne div2
-done:
+_div3:
+    rol quotient
     pla
-    tay
+    lsr a
+    dey
+    bne _div4
+_done:
     txa
-    tsx
-    sta $102,x
-    tya
-    sta $101,x
-    lda dividend
-    sta $103,x
-    lda dividend+1
-    sta $104,x
+    sta 3,s
+    lda quotient
+    sta 1,s
     jmp do_next
 
 pagesize:
+    .ax8
     sty size_y
     stx size_x
     rts
@@ -204,6 +169,7 @@ pagesize:
     ;; ESC[row;colH
     ;; where row = y, col = x
 gotoxy:
+    .ax8
     phx
     phy
     lda #27                     ;ESC
@@ -222,6 +188,7 @@ gotoxy:
 
 clear_seq:  .byte 27,"[","H",27,"[","J",0
 scroll_up:
+    .ax8
     cmp #255
     bne _done
     ldx #0

@@ -12,9 +12,9 @@ SRC_65816 = fth_main.fs fth_core_65816.fs
 SRC_WDC = start.s fth_main_wdc.s mach_wdc.s
 SRC_X16 = start.s fth_main_x16.s mach_x16.s
 SRC_F256 = start.s fth_main_f256.s mach_f256.s
-SRC_WDC_16 = start_65816.s fth_main_wdc_16.s mach_wdc.s
-SRC_X16_16 = start_65816.s fth_main_x16_16.s mach_x16.s
-SRC_F256_16 = start_65816.s fth_main_f256_16.s mach_f256.s
+SRC_WDC_16 = start_65816.s fth_main_wdc_16.s mach_wdc_16.s
+SRC_X16_16 = start_65816.s fth_main_x16_16.s mach_x16_16.s
+SRC_F256_16 = start_65816.s fth_main_f256_16.s mach_f256_16.s
 
 clean:
 	rm -f $(TARGETS) *.o *.map *.lis fth_main_*.s
@@ -48,11 +48,11 @@ x16Forth16.prg: $(SRC_X16_16)
 f256Forth16.pgz: $(SRC_F256_16)
 	$(AS) $(ASFLAGS16) -D 'targ="f256"' --c256-pgz --output-exec=start -o $@ -L $@.lis --map $@.map $<
 
-fth_main_wdc_16.s: $(SRC_6502) $(RFC)
+fth_main_wdc_16.s: $(SRC_65816) $(RFC)
 	$(RFC) --arch ca6502 -d ARCH_65816,ARCH_WDC fth_main.fs > $@ || rm fth_main_wdc_16.s
 
-fth_main_x16_16.s: $(SRC_6502) $(RFC)
+fth_main_x16_16.s: $(SRC_65816) $(RFC)
 	$(RFC) --arch ca6502 -d ARCH_65816,ARCH_X16 fth_main.fs > $@ || rm fth_main_x16_16.s
 
-fth_main_f256_16.s: $(SRC_6502) f256_files.fs $(RFC)
+fth_main_f256_16.s: $(SRC_65816) f256_files.fs $(RFC)
 	$(RFC) --arch ca6502 -d ARCH_65816,ARCH_F256 fth_main.fs > $@ || rm fth_main_f256_16.s

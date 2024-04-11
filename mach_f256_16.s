@@ -1,43 +1,33 @@
 ll_mult:
+    .a8
     stz 1
+    .a16
     pla
     sta MULU_A_L
     pla
-    sta MULU_A_H
-    pla
     sta MULU_B_L
-    pla
-    sta MULU_B_H
-    lda MULU_LH
-    pha
     lda MULU_LL
     pha
     jmp do_next
 
 ll_slash_mod:
+    .a8
     stz 1
-    tsx
-    lda $101,x
+    .a16
+    lda 1,s
     sta DIVU_D_L
-    lda $102,x
-    sta DIVU_D_H
-    lda $103,x
+    lda 3,s
     sta DIVU_N_L
-    lda $104,x
-    sta DIVU_N_H
 
     lda QUOT_L
-    sta $101,x
-    lda QUOT_H
-    sta $102,x
+    sta 1,s
     lda REMU_L
-    sta $103,x
-    lda REMU_H
-    sta $104,x
+    sta 3,s
     jmp do_next
 
 
 gotoxy:
+    .ax8
     pha
     stx screen_x
     sty screen_y
@@ -60,6 +50,7 @@ gotoxy:
     rts
 
 dispchar:
+    .ax8
     pha
     ldx 1
     ldy #2
@@ -104,15 +95,15 @@ _done:
     rts
 
 mach_init0:
+    .a16
     sei
-    lda #<event
-    sta kernel.args.events+0
-    lda #>event
-    sta kernel.args.events+1
+    lda #event
+    sta kernel.args.events
     cli
     rts
 
 mach_init1:
+    .ax8
     lda 1
     pha
     stz 1
@@ -135,6 +126,7 @@ mach_init1:
     rts
 
 mach_hex_char:
+    .ax8
     tsx
     lda $101,x
     and #$0f
@@ -151,6 +143,7 @@ _done:
     jmp do_next
 
 screenfill:
+    .ax8
     ldx #0
     ldy #0
     jsr gotoxy
@@ -175,6 +168,7 @@ ip_disp_label .null "IP:"
 here_disp_label .null "H :"
 
 hon:
+    .ax8
     ldy #4
 -   lsr
     dey
@@ -185,12 +179,14 @@ hon:
     rts
 
 lon:
+    .ax8
     and #$0f
     tax
     lda hex_digit,x
     rts
 
 show_ip:
+    .ax8
     ldx #0
 -   lda ip_disp_label,x
     beq +
@@ -214,6 +210,7 @@ show_ip:
     rts
 
 show_here:
+    .ax8
     ldx #0
 -   lda here_disp_label,x
     beq +
@@ -237,6 +234,7 @@ show_here:
     rts
 
 show_word:
+    .ax8
     sec
     lda w
     sbc #7                      ; Just use the space after-padding, not len
@@ -254,6 +252,7 @@ show_word:
     rts
 
 show_rsp:
+    .ax8
     lda #'R'
     sta rsp_disp_addr
     lda #':'
@@ -282,6 +281,7 @@ show_rsp:
     rts
 
 show_psp:
+    .ax8
     lda #'P'
     sta psp_disp_addr
     lda #':'
@@ -310,6 +310,7 @@ show_psp:
     rts
 
 mach_delay:
+    .ax8
     ldx #0
 x   ldy #0
 y   dey
@@ -319,6 +320,7 @@ y   dey
     rts
 
 mach_dbg:
+    .ax8
     rts
     ;; A has low order of new IP
     lda $01
@@ -338,6 +340,7 @@ mach_dbg:
     rts
 
 con_init:
+    .ax8
     stz 1
     lda #0
     sta $d004                   ;turn off the border?
@@ -349,6 +352,7 @@ con_init:
     rts
 
 con_tx:
+    .ax8
     cmp #8                      ; backspace
     bne _maybe_13
     jmp do_bs
@@ -375,6 +379,7 @@ _doout
     jmp dispchar
 
 con_rx:
+    .ax8
     lda kernel.args.events.pending
     bpl con_rx
     jsr kernel.NextEvent
@@ -392,6 +397,7 @@ raw_bs:
     rts
 
 do_bs:
+    .ax8
     dec screen_x
     bpl _do_erase
     inc screen_x
@@ -414,6 +420,7 @@ _do_erase:
     ;; mac2,3 == src
     ;; mac4 == scroll count
 scroll_up:
+    .ax8
     cmp #60
     bcc _in_bounds
     lda #60

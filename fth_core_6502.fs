@@ -801,7 +801,7 @@ CODE 2r>
     ldx rsp
     ldy #4
 again:
-    lda $104,x
+    lda rstk+4,x
     pha
     dex
     dey
