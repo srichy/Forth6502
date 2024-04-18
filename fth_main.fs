@@ -125,7 +125,6 @@ include fth_core_65816.fs
             do_insert 0
         endcase
     until
-
     -
     r> drop r> swap -
 ;
@@ -157,7 +156,7 @@ include fth_core_65816.fs
         + c@ over is_delim   ( delim c delim -- delim f )
         r> and
     while
-            1 >in +!
+        1 >in +!
     repeat
 
     ( delim -- )
@@ -390,6 +389,21 @@ next_immediate
       loop
     else
       ." <0> "
+    then
+    cr
+;
+
+: .r
+    rdepth ?dup if
+        dup ." <r:" . ." >"
+        hex
+        0 do
+            space
+            rbase i cells - @ .
+        loop
+        decimal
+    else
+        ." <r:0> "
     then
     cr
 ;

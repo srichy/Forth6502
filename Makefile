@@ -10,10 +10,10 @@ all: $(TARGETS)
 SRC_6502 = fth_main.fs fth_core_6502.fs
 SRC_65816 = fth_main.fs fth_core_65816.fs
 SRC_WDC = start.s fth_main_wdc.s mach_wdc.s
-SRC_X16 = start.s fth_main_x16.s mach_x16.s
+SRC_X16 = start.s fth_main_x16.s mach_x16.s x16.inc
 SRC_F256 = start.s fth_main_f256.s mach_f256.s
 SRC_WDC_16 = start_65816.s fth_main_wdc_16.s mach_wdc_16.s
-SRC_X16_16 = start_65816.s fth_main_x16_16.s mach_x16_16.s
+SRC_X16_16 = start_65816.s fth_main_x16_16.s mach_x16_16.s x16.inc
 SRC_F256_16 = start_65816.s fth_main_f256_16.s mach_f256_16.s
 
 clean:

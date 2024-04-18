@@ -39,18 +39,19 @@ ax8 .macro
     .include "f256.inc"
     .endif
 
-    STACK_MEM = $80 - $22 - $10
+    STACK_MEM = $80 - $22 - $12
 
     ;; Set up symbols for the zero elements
     * = $22
-rsp:    .byte ?
 wjmp:   .byte ?
 w:      .addr ?
 ip:     .addr ?
 rstk:   .fill STACK_MEM+1
+    rstk_top = * - 1
 mac:    .fill 6
 here_store: .addr ?
-cfp:    .byte ?
+rsp:    .addr ?
+cfp:    .addr ?
 
     divisor = mac
     dividend = mac+2
@@ -87,19 +88,21 @@ scrptr: .addr ?
 start:
     clc
     xce
-    .ax8                        ; 8-bit A,X for init
-    ldx #$ff
+    .a8                        ; 8-bit A,X for init
+    .x16
+    ldx #$01ff
     txs
+    ldx #CORE_MEM_END
     stx cfp
     jsr mach_init0
+    ;; Init parameter stack
+    .a16
+    lda #rstk_top
+    sta rsp
     .ax8
     lda #$4c               ; jmp a opcode
     sta wjmp               ; Now we can do 'jmp wjmp' to get 'jmp (w)'
-    ;; Init parameter stack
-    lda #STACK_MEM
-    sta rsp
-    ;; Init return stack
-    ;; Init hardware.  FIXME to make this per-platform
+    ;; Init hardware.
     jsr mach_init1
     ;; Load IP with "cold"
     ;; Then fall through to "next"
@@ -111,7 +114,7 @@ start:
     bra start
 
 do_next:
-    .a16
+    .ax16
     lda (ip)
     sta w
     jsr mach_dbg

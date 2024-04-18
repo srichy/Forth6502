@@ -1,5 +1,5 @@
 ;;; -*- asm -*-
-    CORE_MEM_END = $9eff - $ff
+    CORE_MEM_END = $9dff
 
     ACPTR = $ffa5
     CHKIN = $ffc6

@@ -238,6 +238,26 @@ CODE depth
     pha
 END-CODE
 
+CODE rdepth
+    lda #0
+    pha
+    lda #STACK_MEM
+    sec
+    sbc rsp
+    lsr
+    pha
+END-CODE
+
+CODE rbase
+    lda #0
+    pha
+    lda #STACK_MEM
+    dec a
+    clc
+    adc #rstk
+    pha
+END-CODE
+
 CODE dup
     pla
     tax

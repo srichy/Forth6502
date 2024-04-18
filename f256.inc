@@ -1,5 +1,5 @@
 ;;; -*- asm -*-
-    CORE_MEM_END = $9fff - $ff
+    CORE_MEM_END = $9fff
 
     DMA_CTRL = $DF00
 

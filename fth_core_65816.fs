@@ -17,7 +17,7 @@ dict:
     .text format("%-7s", \name[:7])
     .addr \prev
 cfa:
-    .al
+    .ax16
     .endmacro                   ; PFA implicit, follows macro
 
 NEXT .macro
@@ -46,7 +46,7 @@ puthere16:
     rts
 
 rpush1
-    .x8
+    .x16
     ldx rsp
     dex
     dex
@@ -54,7 +54,7 @@ rpush1
     rts
 
 rpop1
-    .x8
+    .x16
     ldx rsp
     inx
     inx
@@ -62,17 +62,15 @@ rpop1
     rts
 
 rpush2
-    php
-    .a8
+    .a16
     lda rsp
     sec
     sbc #4
     sta rsp
-    plp
     rts
 
 rpop2
-    .a8
+    .a16
     lda rsp
     clc
     adc #4
@@ -82,10 +80,10 @@ rpop2
 w_enter .block
 cfa
     ;jsr    debug_dump
+    .ax16
     jsr rpush1
-    .a16
     lda ip
-    sta rstk+1,x
+    sta 1,x
     clc
     lda w
     adc #3
@@ -118,6 +116,7 @@ END-CODE
 next_immediate
 CODE brk
     brk
+    .byte $55
 END-CODE
 
 CODE init_serial
@@ -135,22 +134,19 @@ CODE lit
 END-CODE
 
 CODE exit
-    .x8
     ldx rsp
-    lda rstk+1,x
+    lda 1,x
     sta ip
     jsr rpop1
 END-CODE
 
 CODE p0
-    .x16
     ldx #$1ff
     txs
 END-CODE
 
 CODE r0
-    .a8
-    lda #STACK_MEM
+    lda #rstk_top
     sta rsp
 END-CODE
 
@@ -160,7 +156,6 @@ CODE emit
 END-CODE
 
 CODE at-xy
-    .ax16
     pla
     tay
     pla
@@ -169,7 +164,6 @@ CODE at-xy
 END-CODE
 
 CODE pagesize
-    .ax16
     pla
     tay
     pla
@@ -188,7 +182,6 @@ END-CODE
 
     ( c-addr u char -- )
 CODE fill
-    .ax16
     plx                         ; char
     ply                         ; count
     pla                         ; base addr
@@ -217,13 +210,23 @@ CODE unloop
 END-CODE
 
 CODE depth
-    .ax8                        ; fixme
-    tsx
-    lda #0
-    pha
-    txa
-    eor #$ff                    ; one's comp because zero stack == #$ff
+    tsc
+    eor #$1ff                   ; one's comp because zero stack == #$1ff
     lsr                         ; now div by two since cells are two bytes
+    pha
+END-CODE
+
+CODE rdepth
+    lda #rstk_top
+    sec
+    sbc rsp
+    lsr
+    pha
+END-CODE
+
+CODE rbase
+    lda #rstk_top
+    dec a
     pha
 END-CODE
 
@@ -244,7 +247,6 @@ CODE drop
 END-CODE
 
 CODE swap
-    .ax16
     lda 1,s
     tax
     lda 3,s
@@ -274,7 +276,6 @@ CODE tuck
 END-CODE
 
 CODE pick
-    .ax16
     tsx
     txa
     asl 1,x
@@ -305,7 +306,6 @@ CODE 2over
 END-CODE
 
 CODE 2swap
-    .ax16
     lda 1,s
     tax
     lda 5,s
@@ -321,7 +321,6 @@ CODE 2swap
 END-CODE
 
 CODE rot
-    .ax16
     lda 5,s
     tax
     lda 3,s
@@ -345,7 +344,6 @@ CODE or
 END-CODE
 
 CODE lshift
-    .ax16
     ply
     pla
 _again:
@@ -356,7 +354,6 @@ _again:
 END-CODE
 
 CODE rshift
-    .ax16
     ply
     pla
 _again:
@@ -404,6 +401,7 @@ END-CODE
 CODE invert
     lda #$ffff
     eor 1,s
+    sta 1,s
 END-CODE
 
 CODE 0<
@@ -433,7 +431,7 @@ CODE <
     pla
     cmp 1,s
     beq _set_false
-    bcc _set_false
+    bmi _set_false
     lda #$ffff
     bra _set_flag
 _set_false:
@@ -470,13 +468,11 @@ CODE -
 END-CODE
 
 CODE 1+
-    .x16
     tsx
     inc 1,x
 END-CODE
 
 CODE 1-
-    .x16
     tsx
     dec 1,x
 END-CODE
@@ -493,11 +489,11 @@ CODE 2@
     .x8
     pla
     sta mac
-    ldy #1
--   lda (mac),y
+    ldy #2
+    lda (mac),y
     pha
-    dey
-    bpl -
+    lda (mac)
+    pha
 END-CODE
 
 CODE @
@@ -512,13 +508,13 @@ CODE c@
     ldy #0
     lda (1,s),y
     .a16
-    and #$00ff
+    and #$ff
     sta 1,s
 END-CODE
 
 CODE 2!
     .x8
-    ldy #1
+    ldy #2
     pla
     sta mac
     pla
@@ -563,10 +559,8 @@ CODE qbranch
     sta ip
     bra _done
 _no_branch:
-    clc
-    lda ip
-    adc #2
-    sta ip
+    inc ip
+    inc ip
 _done:
 END-CODE
 
@@ -577,40 +571,36 @@ END-CODE
 CODE >r
     jsr rpush1
     pla
-    sta rstk+1,x
+    sta 1,x
 END-CODE
 
 CODE r>
-    .x8
     ldx rsp
-    lda rstk+1,x
+    lda 1,x
     pha
     jsr rpop1
 END-CODE
 
 CODE r@
-    .x8
     ldx rsp
-    lda rstk+1,x
+    lda 1,x
     pha
 END-CODE
 
 CODE 2>r
     jsr rpush2
     tax
-    .x8
     pla
-    sta rstk+1,x
+    sta 1,x
     pla
-    sta rstk+3,x
+    sta 3,x
 END-CODE
 
 CODE 2r>
-    .x8
     ldx rsp
-    lda rstk+3,x
+    lda 3,x
     pha
-    lda rstk+1,x
+    lda 1,x
     pha
     jsr rpop2
 END-CODE
@@ -620,19 +610,17 @@ CODE 2rdrop
 END-CODE
 
 CODE >cf
-    .x8
     ldx cfp
     dex
     dex
     stx cfp
     pla
-    sta CORE_MEM_END+1,x
+    sta 1,x
 END-CODE
 
 CODE cf>
-    .x8
     ldx cfp
-    lda CORE_MEM_END+1,x
+    lda 1,x
     pha
     inx
     inx
@@ -640,54 +628,48 @@ CODE cf>
 END-CODE
 
 CODE cf@
-    .x8
     ldx cfp
-    lda CORE_MEM_END+1,x
+    lda 1,x
     pha
 END-CODE
 
 CODE cfnip
     ;; fixme: not yet tested
-    .x8
     ldx cfp
-    lda CORE_MEM_END+1,x
-    sta CORE_MEM_END+3,x
+    lda 1,x
+    sta 3,x
     inx
     inx
     stx cfp
 END-CODE
 
 CODE i
-    .x8
     ldx rsp
-    lda rstk+1,x
+    lda 1,x
     pha
 END-CODE
 
 CODE j
-    .x8
     ldx rsp
-    lda rstk+5,x
+    lda 5,x
     pha
 END-CODE
 
 CODE k
-    .x8
     ldx rsp
-    lda rstk+9,x
+    lda 9,x
     pha
 END-CODE
 
 ( full loop terminator include dropping loop counters from rstk )
 CODE do_loop
     ;; Increment loop counter
-    .x8
     ldx rsp
-    inc rstk+1,x
+    inc 1,x
 
     ;; Compare counter with limit
-    lda rstk+3,x
-    cmp rstk+1,x
+    lda 3,x
+    cmp 1,x
     bne _loop_again
 
     ;; Loop finished. Remove loop context. Skip backpointer.
@@ -704,16 +686,15 @@ END-CODE
 ( full loop terminator include dropping loop counters from rstk )
 CODE do_plus_loop
     ;; Increment loop counter
-    .x8
     ldx rsp
     clc
     pla
-    adc rstk+1,x
-    sta rstk+1,x
+    adc 1,x
+    sta 1,x
 
     ;; Compare counter with limit, (count - limit here though)
-    lda rstk+1,x
-    cmp rstk+3,x
+    lda 1,x
+    cmp 3,x
     bcc loop_again              ; If carry is clear, counter < limit
 
     jsr rpop2
@@ -728,11 +709,10 @@ END-CODE
 
 ( loop terminator that does not clear the rstk )
 CODE do_loop1
-    .x8
     ldx rsp
-    inc rstk+1,x
-    lda rstk+3,x
-    cmp rstk+1,x
+    inc 1,x
+    lda 3,x
+    cmp 1,x
     bne loop_again
     ; jsr rpop2                 ; This is the only difference compared to do_loop (currently)
     inc ip
@@ -783,6 +763,7 @@ END-CODE
 
 CODE halt
     brk
+    .byte $66
 END-CODE
 
 CODE execute
@@ -792,7 +773,6 @@ CODE execute
 END-CODE
 
 CODE move
-    .x16
     pla
     dec a                       ; mvn, mvp need count-1
     sta mac
