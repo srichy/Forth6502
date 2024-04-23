@@ -719,6 +719,55 @@ next_immediate
     loop
 ;
 
+[DEFINED] ARCH_65816 [IF]
+[DEFINED] ARCH_F256 [IF]
+
+CODE key_scan_init
+    .as
+    .xs
+    sep #$30
+    stz 1
+    lda #$ff
+    sta $db03
+    stz $db02
+END-CODE
+
+CODE key_scan
+    .as
+    .xs
+    sep #$30
+    stz 1
+    lda #%01111111
+    sta $db01
+    lda #0
+    pha
+    lda $db00
+    pha
+END-CODE
+
+: key_debug
+    key_scan_init
+
+    0
+    begin
+        0 22 at-xy
+
+        1+ 4 mod dup case
+            0 of 47 emit endof
+            1 of 45 emit endof
+            2 of 92 emit endof
+            3 of 124 emit endof
+        endcase
+
+        key_scan
+
+        ." Key val: " . cr
+        10000 0 do loop ( delay )
+    again
+;
+[THEN]
+[THEN]
+
 : cold
     here0
     10 base !
@@ -729,6 +778,15 @@ next_immediate
     char_block 0 20 at-xy
 
     ." HOLDFORTH 0.1" cr
+
+[DEFINED] ARCH_65816 [IF]
+[DEFINED] ARCH_F256 [IF]
+
+    ( key_debug )
+
+[THEN]
+[THEN]
+
     quit
     depth
     bye

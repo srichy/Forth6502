@@ -95,11 +95,12 @@ _done:
     rts
 
 mach_init0:
-    .a16
+    .ax8
     sei
-    lda #event
-    sta kernel.args.events
-    cli
+    stz 1
+    stz $db02
+    lda #$ff
+    sta $db03
     rts
 
 mach_init1:
@@ -257,9 +258,7 @@ show_rsp:
     sta rsp_disp_addr
     lda #':'
     sta rsp_disp_addr+1
-    clc
-    lda #rstk
-    adc rsp
+    lda rsp
     pha
     jsr hon
     sta rsp_disp_addr+2
@@ -268,9 +267,12 @@ show_rsp:
     sta rsp_disp_addr+3
     lda #','
     sta rsp_disp_addr+4
+    .a16
+    lda #rstk_top
     sec
-    lda #STACK_MEM
     sbc rsp
+    lsr
+    .a8
     pha
     jsr hon
     sta rsp_disp_addr+5
@@ -311,7 +313,7 @@ show_psp:
 
 mach_delay:
     .ax8
-    ldx #0
+    ldx #10
 x   ldy #0
 y   dey
     bne y
@@ -320,8 +322,9 @@ y   dey
     rts
 
 mach_dbg:
-    .ax8
     rts
+    .ax8
+    ;rts
     ;; A has low order of new IP
     lda $01
     pha
@@ -336,7 +339,7 @@ mach_dbg:
 
     pla
     sta $01
-    ;jsr mach_delay
+    jsr mach_delay
     rts
 
 con_init:
@@ -380,16 +383,23 @@ _doout
 
 con_rx:
     .ax8
-    lda kernel.args.events.pending
-    bpl con_rx
-    jsr kernel.NextEvent
-    bcs con_rx
-    lda event.type
-    cmp #kernel.event.key.PRESSED
-    bne con_rx                  ; only keys for now
-    lda event.key.flags
-    bmi con_rx                  ; Negative flags == non-ASCII
-    lda event.key.ascii
+    stz 1                       ; Page 0 of I/O control
+    lda #$ff
+    sta $db03
+    stz $db02
+_try_again
+    lda #%01111111
+    sta $db01
+    nop
+    nop
+    lda $db00
+    ldx #2
+    stx $01
+    sta ip_disp_addr
+    stz 1
+    cmp #$ff
+    beq _try_again
+    lda #65
     rts
 
 raw_bs:
