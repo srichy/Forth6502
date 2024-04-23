@@ -202,6 +202,7 @@ CODE key
     lda #0
     pha
     jsr con_rx
+    .a8
     pha
 END-CODE
 

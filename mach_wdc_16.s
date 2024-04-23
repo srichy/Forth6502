@@ -7,7 +7,7 @@ mach_init0:
     rts
 
 mach_init1:
-    .a8
+    .ax8
     lda #1
     jsr set_led
     jsr con_init
@@ -31,7 +31,7 @@ _done:
 
 mach_dbg:
     ;; A has low order of new IP
-    jsr set_led
+    ;jsr set_led
     rts
 
 set_led:
@@ -56,10 +56,7 @@ con_init:
 
 con_tx:
     .ax8
-    pha
-    lda #0
-    sta USB_DATA_DDR
-    pla
+    stz USB_DATA_DDR
     sta USB_DATA_OR
     lda #USB_CTRL_TXEb
     ;; Wait for transmitter availability
@@ -77,8 +74,7 @@ con_tx:
 
 con_rx:
     .ax8
-    lda #0
-    sta USB_DATA_DDR
+    stz USB_DATA_DDR
     lda #USB_CTRL_RXFb
 -   bit USB_CTRL_IR
     bne -
