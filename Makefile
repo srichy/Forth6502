@@ -1,6 +1,6 @@
 AS = 64tass
-ASFLAGS = -C --m65c02
-ASFLAGS16 = -C --m65816
+ASFLAGS = -C --m65c02 -D 'proc="65c02"'
+ASFLAGS16 = -C --m65816 -D 'proc="65816"'
 RFC = ../rfc/target/debug/rfc
 
 TARGETS = wdcForth x16Forth.prg f256Forth.pgz wdcForth16 x16Forth16.prg f256Forth16.pgz

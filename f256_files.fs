@@ -108,12 +108,28 @@ END-CODE
     abort" FILE-SIZE not yet supported"
 ;
 
-: include-file ( i*x fileid -- j*x )
-    abort" INCLUDE-FILE not yet supported"
+: include-file ( i*x fileid -- j*x ) ( FIXME: refactor into QUIT and friends )
+    dup push-source-id
+    begin
+        tib dup tiblen 2 - source-id read-line if
+            pop-source-id
+            abort" File read failed.  include-file aborted."
+        then
+    while ( flag is true; we have not reached EOF yet )
+        ?dup if ( We have a non-zero count of characters on this line )
+            ticksource 2!
+            0 >in !
+            interpret
+        then
+    repeat
+    pop-source-id
 ;
 
 : included ( i*x c-addr u -- j*x )
-    abort" INCLUDED not yet supported"
+    R/O open-file if
+        abort" File open failed"
+    then
+    include-file
 ;
 
 : open-file ( c-addr u fam -- fileid ior )
@@ -277,7 +293,7 @@ END-CODE
 ;
 
 : include ( i*x "name" -- j*x )
-    abort" INCLUDE not yet supported"
+    bl word count included
 ;
 
 : refill ( -- flag )

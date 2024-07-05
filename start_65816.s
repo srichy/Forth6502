@@ -88,7 +88,10 @@ scrptr: .addr ?
 start:
     clc
     xce
-    .a8                        ; 8-bit A,X for init
+    .ax8                        ; 8-bit A,X for init
+    ldx #7
+    stx source_id_sp
+    stz source_id_stk,x         ; Set input to keyboard by default
     .x16
     ldx #$01ff
     txs

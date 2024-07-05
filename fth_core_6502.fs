@@ -26,8 +26,8 @@ NEXT .macro
 w_core_dict    .HIGH_W 9, "core_dict", w_const, , "0"
     .addr dict_head
 
-source_id_stk:   .fill 16      ;8 addresses
-source_id_sp:    .word 0
+source_id_stk:   .fill 8      ;8 fileIds
+source_id_sp:    .byte 7
 
     ;; Byte is in A.  Put at here and advance here
 puthere:

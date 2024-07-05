@@ -475,12 +475,11 @@ next_immediate
 ;
 
 : evaluate ( i*x c-addr u -- j*x )
-    ( save-input )
-    ( store -1 in source-id )
+    -1 push-source-id
     ticksource 2!
     0 >in !
     interpret
-    ( restore-input )
+    pop-source-id
 ;
 
 : quit ( -- ) ( R: i*x -- )
@@ -782,7 +781,7 @@ END-CODE
 [DEFINED] ARCH_65816 [IF]
 [DEFINED] ARCH_F256 [IF]
 
-    ( key_debug )
+    key_debug
 
 [THEN]
 [THEN]
@@ -793,16 +792,49 @@ END-CODE
 ;
 
 : restore-input ( xn ... x1 n -- flag )
-    abort" RESTORE-INPUT not yet supported"
+    abort" RESTORE-INPUT not supported"
 ;
 
 : save-input ( -- xn ... x1 n )
-    abort" SAVE-INPUT not yet supported"
+    abort" SAVE-INPUT not supported"
 ;
 
-: source-id ( -- 0 | -1 | fileid )
-    abort" SOURCE-ID not yet supported"
-;
+( -- 0 | -1 | fileid )
+CODE source-id
+    .if proc=="65816"
+    .ax8
+    .endif
+    lda #0
+    pha
+    ldx source_id_sp
+    lda source_id_stk,x
+    pha
+END-CODE
+
+CODE push-source-id
+    .if proc=="65816"
+    .ax8
+    .endif
+    ldx source_id_sp
+    beq _done
+    dex
+    stx source_id_sp
+    pla
+    sta source_id_stk,x
+    pla
+_done:
+END-CODE
+
+CODE pop-source-id
+    .if proc=="65816"
+    .ax8
+    .endif
+    lda source_id_sp
+    cmp #7
+    bge _done
+    inc source_id_sp
+_done:
+END-CODE
 
 [DEFINED] ARCH_F256 [IF]
 

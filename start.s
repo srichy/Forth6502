@@ -56,6 +56,9 @@ start:
     ldx #$ff
     txs
     stx cfp
+    ldx #7
+    stx source_id_sp
+    stz source_id_stk,x         ; Set input to keyboard by default
     jsr mach_init0
     lda #$4c               ; jmp a opcode
     sta wjmp               ; Now we can do 'jmp wjmp' to get 'jmp (w)'
