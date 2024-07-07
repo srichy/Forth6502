@@ -12,6 +12,11 @@ include fth_core_65816.fs
 
 [THEN]
 
+next_immediate
+: (
+    41 word drop
+;
+
 : . ( x -- )
     <# #s #> type
 ;
@@ -52,6 +57,12 @@ include fth_core_65816.fs
         dup i + c@ emit
     loop
     drop
+;
+
+: spaces ( n -- )
+    ?dup if
+        0 do bl emit loop
+    then
 ;
 
 : count ( c-addr1 -- c-addr2 u )
@@ -184,6 +195,15 @@ include fth_core_65816.fs
     word_space
 ;
 
+: char ( "<spaces>name" -- char )
+    bl word count drop c@
+;
+
+next_immediate
+: [char] ( "<spaces>name" -- )
+    ['] lit , bl word count drop c@ ,
+;
+
 132 CONSTANT tiblen
 VARIABLE tib 132 XALLOT
 VARIABLE word_space 128 XALLOT
@@ -210,6 +230,7 @@ next_immediate
 : s" ( -- c-addr u )
     34 word count ( get the next input until a quote char )
     state @ 0= if
+        ( caddr len -- )
         squote_size min dup >r
         squote_store swap move
         squote_store r>
@@ -236,6 +257,31 @@ next_immediate
     then
 ;
 
+next_immediate
+: c"
+    34 word dup c@ 1+
+    state @ 0= if
+        squote_size min
+        squote_store swap move
+        squote_store
+    else
+        ['] branch , dup here + ,
+        swap    ( len caddr -- )
+        here    ( len caddr here -- )
+        2 pick  ( len caddr here len -- )
+        move    ( len -- )
+        here    ( len here -- )
+        swap    ( here len -- )
+        allot   ( here -- )
+        ['] lit , ,
+    then
+;
+
+next_immediate
+: .(
+    41 word count type
+;
+
 : cr ( -- )
     13 emit
     10 emit
@@ -245,9 +291,10 @@ next_immediate
     42 emit
 ;
 
-: find ( c-addr -- c-addr 0 | xt 1 | xt -1 )
+: find_with_prev ( c-addr -- c-addr 0 prev | xt 1 prev | xt -1 prev )
     dict_start @
 
+    here >r
     begin
         ( c-addr dict_next -- )
         ?dup
@@ -259,17 +306,43 @@ next_immediate
                 else
                     -1
                 then
+                r>
                 exit
             then
-            r> r> HDR_SIZE + @
+            r> r> r> drop dup >r
+            HDR_SIZE + @
     repeat
     0
+    r>
+;
+
+: find ( c-addr -- c-addr 0 | xt 1 | xt -1 )
+    find_with_prev drop
 ;
 
 : '
     bl word find 0= if
         drop 0
     then
+;
+
+: >number ( ud1 c-addr1 n1 -- ud2 c-addr2 n2 )
+    2dup 2>r
+    over + swap 2>r 0 2r> do
+        drop
+        i c@ c_to_i_raw
+        dup 0 < over base @ >= or if
+            drop
+            i
+            ." I'm leaving."
+            leave
+        then
+        swap base @ * +
+        i 1+                    ( We might fail on the next, but not this one )
+    loop
+    ( ud2 i-fail -- )
+    2r> ( ud2 i-fail c-addr1 n1 -- ) ( n1 - [i-fail - c-addr1] = n2 )
+    rot >r r@ rot - swap - r> swap
 ;
 
 : check_sign ( c-addr n -- 1|-1 c-addr n )
@@ -301,7 +374,7 @@ next_immediate
     then
 ;
 
-: c_to_i ( c -- n )
+: c_to_i_raw ( c -- n )
     dup 97 >= if
         87 -
         exit
@@ -313,7 +386,11 @@ next_immediate
     then
 
     48 -
-    dup 0 < over 15 > or
+;
+
+: c_to_i ( c -- n )
+    c_to_i_raw
+    dup 0 < over base @ >= or
     abort" WORD NOT FOUND"
 ;
 
@@ -416,12 +493,25 @@ next_immediate
     r> allot
 ;
 
-: create ( "word" -- here )
+: do_dict_entry ( action "<spaces>name" -- )
     here
     bl word HDR_SIZE cstr_to_here
     dict_start @ ,
-    0x4c c, lit var ,
+    0x4c c, swap ,
     dict_start !
+;
+
+: create ( "<spaces>name" -- )
+    lit var do_dict_entry
+;
+
+: constant ( x "<spaces>name" -- )
+    lit const do_dict_entry
+    ,
+;
+
+: variable ( "<spaces>name" -- )
+    lit var do_dict_entry
 ;
 
 : :
@@ -513,6 +603,23 @@ next_immediate
     p0 quit
 ;
 
+: qabort ( flag addr n -- )
+    rot if
+        type abort
+    then
+    2drop
+;
+
+next_immediate
+: abort"
+    34 word count
+    ['] branch , dup here + 1 cells + ,
+    swap here 2 pick move here over allot
+    ['] lit , ,
+    ['] lit , ,
+    ['] qabort ,
+;
+
 : immediate
     dict_start @ dup c@ 0x80 or swap c!
 ;
@@ -596,6 +703,22 @@ next_immediate
     ['] unloop ,
 ;
 
+next_immediate
+: +loop ( C: do-sys -- )
+    ['] do_plus_loop1 , cf> dup , ( loop target was top-of-C: stack )
+    here resolve_leaves
+    ['] unloop ,
+;
+
+next_immediate
+: literal ( x -- ; FIXME make metacompiler generate "literal" not "lit" )
+    ['] lit ,
+;
+
+: buffer: ( u "<name>" -- ; -- addr )
+    create allot
+;
+
 : hello
     s" HELLO, WORLD!"
     type
@@ -613,6 +736,19 @@ next_immediate
     else
         emit
     then
+;
+
+: ? ( addr -- )
+    base @ >r
+    @ dup
+    hex
+    ." 0x" <# #s #> type
+    bl emit
+    decimal
+    <# #s #> type
+    cr
+
+    r> base !
 ;
 
 : dump ( addr u -- )
@@ -636,6 +772,38 @@ next_immediate
     +loop
     drop
     r> base !
+;
+
+: xt>name ( xt -- addr len )
+    HDR_SIZE - 2 - count 127 and
+;
+
+: see ( "<spaces>name" -- )
+    bl word find_with_prev >r ?dup if
+        over ." : " xt>name type
+        1 = if
+            bl emit ." ( immediate )"
+        then
+        cr
+        ( fixme: do proper see support for HL words, vars, etc )
+        r> swap do
+            hex
+            i <# # # # # # # #> type ." :"
+            i c@ dup dup
+            <# # # #> type bl emit
+            dup 0x20 >= if
+                emit
+            else
+                drop 0x2e emit
+            then
+            bl emit
+            decimal
+            <# # # # #> type cr
+        loop
+    else
+        r> drop
+        ." Cannot find '" count type ." '."
+    then
 ;
 
 : print_name ( name-addr -- )

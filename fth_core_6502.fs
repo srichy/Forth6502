@@ -448,6 +448,18 @@ CODE or
     pla
 END-CODE
 
+CODE xor
+    tsx
+    lda $101,x
+    eor $103,x
+    sta $103,x
+    lda $102,x
+    eor $104,x
+    sta $104,x
+    pla
+    pla
+END-CODE
+
 CODE lshift
     pla
     tay
@@ -524,6 +536,55 @@ nonzero
 finished
     sta $101,x
     sta $102,x
+END-CODE
+
+CODE 0<>
+    tsx
+    lda $101,x
+    bne nonzero
+    lda $102,x
+    bne nonzero
+    lda #$00
+    bra finished
+nonzero
+    lda #$ff
+finished
+    sta $101,x
+    sta $102,x
+END-CODE
+
+CODE abs
+    tsx
+    lda $102,x
+    bpl _done
+    eor #$ff
+    sta $102,x
+    lda $101,x
+    eor #$ff
+    inc a
+    sta $101,x
+    bne _done
+    inc $102,x
+_done:
+END-CODE
+
+CODE negate
+    tsx
+    clc
+    lda $101,x
+    eor #$ff
+    adc #1
+    sta $101,x
+    lda $102,x
+    eor #$ff
+    adc #0
+    sta $102,x
+END-CODE
+
+CODE ALIGN
+END-CODE
+
+CODE ALIGNED
 END-CODE
 
 CODE invert
@@ -652,6 +713,23 @@ END-CODE
 
 CODE *
     jmp ll_mult
+END-CODE
+
+CODE 2*
+    tsx
+    asl $101,x
+    rol $102,x
+END-CODE
+
+CODE 2/
+    tsx
+    clc
+    lda $102,x
+    bpl _is_positive
+    sec
+_is_positive:
+    ror $102,x
+    ror $101,x
 END-CODE
 
 CODE /mod
@@ -829,6 +907,17 @@ again:
     jsr rpop2
 END-CODE
 
+CODE 2r@
+    ldx rsp
+    ldy #4
+again:
+    lda rstk+4,x
+    pha
+    dex
+    dey
+    bne again
+END-CODE
+
 CODE 2rdrop
     jsr rpop2
 END-CODE
@@ -1004,6 +1093,43 @@ loop_again:
 finished:   
 END-CODE
 
+CODE do_plus_loop1
+    ;; Increment loop counter
+    ldx rsp
+    clc
+    pla
+    adc rstk+1,x
+    sta rstk+1,x
+    pla
+    adc rstk+2,x
+    sta rstk+2,x
+
+    ;; Compare counter with limit, (count - limit here though)
+    sec
+    lda rstk+1,x
+    sbc rstk+3,x
+    lda rstk+2,x
+    sbc rstk+4,x
+    bcc loop_again              ; If carry is clear, counter < limit
+
+    ;jsr rpop2                  ; This is the only difference compared to do_plus_loop (currently)
+    clc
+    lda ip
+    adc #2
+    sta ip
+    bcc +
+    inc ip+1
++   bra finished
+loop_again:
+    ldy #1
+    lda (ip)
+    tax
+    lda (ip),y
+    sta ip+1
+    stx ip
+finished:
+END-CODE
+
 CODE here0
     lda edata
     sta here_store
@@ -1041,6 +1167,17 @@ CODE allot
     sta here_store+1
 END-CODE
 
+CODE cell+
+    tsx
+    clc
+    lda $101,x
+    adc #2
+    sta $101,x
+    lda $102,x
+    adc #0
+    sta $102,x
+END-CODE
+
 CODE cells
     tsx
     lda $101,x
@@ -1049,6 +1186,14 @@ CODE cells
     lda $102,x
     rol
     sta $102,x
+END-CODE
+
+CODE char+
+    tsx
+    inc $101,x
+    bne _done
+    inc $102,x
+_done:
 END-CODE
 
 CODE chars

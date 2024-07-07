@@ -17,16 +17,16 @@ SRC_X16_16 = start_65816.s fth_main_x16_16.s mach_x16_16.s x16.inc
 SRC_F256_16 = start_65816.s fth_main_f256_16.s mach_f256_16.s
 
 clean:
-	rm -f $(TARGETS) *.o *.map *.lis fth_main_*.s
+	rm -f $(TARGETS) *.o *.map *.lbl *.lis fth_main_*.s
 
 wdcForth: $(SRC_WDC)
-	$(AS) $(ASFLAGS) -D 'targ="wdc"' --nostart -o $@ -L $@.lis --map $@.map $<
+	$(AS) $(ASFLAGS) -D 'targ="wdc"' --nostart -o $@ -l $@.lbl -L $@.lis --map $@.map $<
 
 x16Forth.prg: $(SRC_X16)
-	$(AS) $(ASFLAGS) -D 'targ="x16"' --cbm-prg -o $@ -L $@.lis --map $@.map $<
+	$(AS) $(ASFLAGS) -D 'targ="x16"' --cbm-prg -o $@ -l $@.lbl -L $@.lis --map $@.map $<
 
 f256Forth.pgz: $(SRC_F256)
-	$(AS) $(ASFLAGS) -D 'targ="f256"' --c256-pgz --output-exec=start -o $@ -L $@.lis --map $@.map $<
+	$(AS) $(ASFLAGS) -D 'targ="f256"' --c256-pgz --output-exec=start -o $@ -l $@.lbl -L $@.lis --map $@.map $<
 
 fth_main_wdc.s: $(SRC_6502) $(RFC)
 	$(RFC) --arch ca6502 -d ARCH_6502,ARCH_WDC fth_main.fs > $@ || rm fth_main_wdc.s
@@ -40,13 +40,13 @@ fth_main_f256.s: $(SRC_6502) f256_files.fs $(RFC)
 # 65816 follows
 
 wdcForth16: $(SRC_WDC_16)
-	$(AS) $(ASFLAGS16) -D 'targ="wdc"' --nostart -o $@ -L $@.lis --map $@.map $<
+	$(AS) $(ASFLAGS16) -D 'targ="wdc"' --nostart -o $@ -l $@.lbl -L $@.lis --map $@.map $<
 
 x16Forth16.prg: $(SRC_X16_16)
-	$(AS) $(ASFLAGS16) -D 'targ="x16"' --cbm-prg -o $@ -L $@.lis --map $@.map $<
+	$(AS) $(ASFLAGS16) -D 'targ="x16"' --cbm-prg -o $@ -l $@.lbl -L $@.lis --map $@.map $<
 
 f256Forth16.pgz: $(SRC_F256_16)
-	$(AS) $(ASFLAGS16) -D 'targ="f256"' --c256-pgz --output-exec=start -o $@ -L $@.lis --map $@.map $<
+	$(AS) $(ASFLAGS16) -D 'targ="f256"' --c256-pgz --output-exec=start -o $@ -l $@.lbl -L $@.lis --map $@.map $<
 
 fth_main_wdc_16.s: $(SRC_65816) $(RFC)
 	$(RFC) --arch ca6502 -d ARCH_65816,ARCH_WDC fth_main.fs > $@ || rm fth_main_wdc_16.s

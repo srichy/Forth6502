@@ -344,6 +344,12 @@ CODE or
     sta 1,s
 END-CODE
 
+CODE xor
+    pla
+    eor 1,s
+    sta 1,s
+END-CODE
+
 CODE lshift
     ply
     pla
@@ -399,10 +405,43 @@ _done:
     pha
 END-CODE
 
+CODE 0<>
+    pla
+    beq _iszero
+    lda #$ffff
+    bra _done
+_iszero:
+    lda #0
+_done:
+    pha
+END-CODE
+
 CODE invert
     lda #$ffff
     eor 1,s
     sta 1,s
+END-CODE
+
+CODE abs
+    lda 1,s
+    bpl _done
+    eor #$ffff
+    inc a
+    sta 1,s
+_done:
+END-CODE
+
+CODE negate
+    lda 1,s
+    eor #$ffff
+    inc a
+    sta 1,s
+END-CODE
+
+CODE ALIGN
+END-CODE
+
+CODE ALIGNED
 END-CODE
 
 CODE 0<
@@ -480,6 +519,21 @@ END-CODE
 
 CODE *
     jmp ll_mult
+END-CODE
+
+CODE 2*
+    tsx
+    asl 1,x
+END-CODE
+
+CODE 2/
+    tsx
+    clc
+    lda 1,x
+    bpl _is_positive
+    sec
+_is_positive:
+    ror 1,x
 END-CODE
 
 CODE /mod
@@ -606,6 +660,14 @@ CODE 2r>
     jsr rpop2
 END-CODE
 
+CODE 2r@
+    ldx rsp
+    lda 3,x
+    pha
+    lda 1,x
+    pha
+END-CODE
+
 CODE 2rdrop
     jsr rpop2
 END-CODE
@@ -725,6 +787,29 @@ loop_again:
 finished:   
 END-CODE
 
+CODE do_plus_loop1
+    ;; Increment loop counter
+    ldx rsp
+    clc
+    pla
+    adc 1,x
+    sta 1,x
+
+    ;; Compare counter with limit, (count - limit here though)
+    lda 1,x
+    cmp 3,x
+    bcc loop_again              ; If carry is clear, counter < limit
+
+    ;jsr rpop2                  ; This is the only difference compared to do_plus_loop (currently)
+    inc ip
+    inc ip
+    bra finished
+loop_again:
+    lda (ip)
+    sta ip
+finished:
+END-CODE
+
 CODE here0
     lda edata
     sta here_store
@@ -752,10 +837,21 @@ CODE allot
     sta here_store
 END-CODE
 
+CODE cell+
+    tsx
+    inc 1,x
+    inc 1,x
+END-CODE
+
 CODE cells
     lda 1,s
     asl
     sta 1,s
+END-CODE
+
+CODE char+
+    tsx
+    inc 1,x
 END-CODE
 
 CODE chars

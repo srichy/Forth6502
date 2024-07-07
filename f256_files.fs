@@ -4,8 +4,6 @@
     ( This does nothing for now )
 ;
 
-VARIABLE tb 100 XALLOT
-
 0 CONSTANT R/O
 1 CONSTANT R/W
 2 CONSTANT W/O
