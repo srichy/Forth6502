@@ -99,11 +99,11 @@ END-CODE
 ;
 
 : file-position ( fileid - ud ior )
-    abort" FILE-POSITION not yet supported"
+    1 abort" FILE-POSITION not yet supported"
 ;
 
 : file-size ( fileid - ud ior )
-    abort" FILE-SIZE not yet supported"
+    1 abort" FILE-SIZE not yet supported"
 ;
 
 : include-file ( i*x fileid -- j*x ) ( FIXME: refactor into QUIT and friends )
@@ -111,7 +111,7 @@ END-CODE
     begin
         tib dup tiblen 2 - source-id read-line if
             pop-source-id
-            abort" File read failed.  include-file aborted."
+            1 abort" File read failed.  include-file aborted."
         then
     while ( flag is true; we have not reached EOF yet )
         ?dup if ( We have a non-zero count of characters on this line )
@@ -124,9 +124,7 @@ END-CODE
 ;
 
 : included ( i*x c-addr u -- j*x )
-    R/O open-file if
-        abort" File open failed"
-    then
+    R/O open-file abort" File open failed"
     include-file
 ;
 
@@ -191,9 +189,7 @@ END-CODE
 
 ( A -1 means EOF )
 : read-byte ( fileid -- b )
-    >r here 1 r> read-file if
-        abort" READ-BYTE: Error reading file"
-    then
+    >r here 1 r> read-file abort" READ-BYTE: Error reading file"
     0= if
         -1
     else
@@ -250,7 +246,7 @@ _done:
 END-CODE
 
 : resize-file ( ud fileid -- ior )
-    abort" RESIZE-FILE not yet supported"
+    1 abort" RESIZE-FILE not yet supported"
 ;
 
 ( c-addr u fileid -- ior )
@@ -277,17 +273,17 @@ _done:
 END-CODE
 
 : write-line ( c-addr u fileid -- ior )
-    abort" READ-LINE not yet supported"
+    1 abort" READ-LINE not yet supported"
 ;
 
 ( File-Access extension words )
 
 : file-status ( c-addr u -- x ior )
-    abort" FILE-STATUS not yet supported"
+    1 abort" FILE-STATUS not yet supported"
 ;
 
 : flush-file ( fileid -- ior )
-    abort" FLUSH-FILE not yet supported"
+    1 abort" FLUSH-FILE not yet supported"
 ;
 
 : include ( i*x "name" -- j*x )
@@ -295,17 +291,17 @@ END-CODE
 ;
 
 : refill ( -- flag )
-    abort" REFILL not yet supported"
+    1 abort" REFILL not yet supported"
 ;
 
 : rename-file ( c-addr1 u1 c-addr2 u2 -- ior )
-    abort" RENAME-FILE not yet supported"
+    1 abort" RENAME-FILE not yet supported"
 ;
 
 : require ( i*x "name" -- i*x )
-    abort" REQUIRE not yet supported"
+    1 abort" REQUIRE not yet supported"
 ;
 
 : required ( i*x c-addr u -- i*x )
-    abort" REQUIRED not yet supported"
+    1 abort" REQUIRED not yet supported"
 ;

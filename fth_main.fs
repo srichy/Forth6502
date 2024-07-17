@@ -334,7 +334,6 @@ next_immediate
         dup 0 < over base @ >= or if
             drop
             i
-            ." I'm leaving."
             leave
         then
         swap base @ * +
@@ -342,7 +341,7 @@ next_immediate
     loop
     ( ud2 i-fail -- )
     2r> ( ud2 i-fail c-addr1 n1 -- ) ( n1 - [i-fail - c-addr1] = n2 )
-    rot >r r@ rot - swap - r> swap
+    rot >r r@ rot - - r> swap
 ;
 
 : check_sign ( c-addr n -- 1|-1 c-addr n )
@@ -960,11 +959,11 @@ END-CODE
 ;
 
 : restore-input ( xn ... x1 n -- flag )
-    abort" RESTORE-INPUT not supported"
+    1 abort" RESTORE-INPUT not supported"
 ;
 
 : save-input ( -- xn ... x1 n )
-    abort" SAVE-INPUT not supported"
+    1 abort" SAVE-INPUT not supported"
 ;
 
 ( -- 0 | -1 | fileid )
