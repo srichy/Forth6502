@@ -679,15 +679,28 @@ next_immediate
 ;
 
 next_immediate
+: ?do ( C: -- do-sys )
+    ['] 2dup ,
+    ['] 2>r ,
+    ['] <> ,
+    ['] qbranch ,
+    0xf2f1 ,
+    here >cf
+;
+
+next_immediate
 : leave
     ['] branch , 0xf2f1 , ( These 0xf2f1s will get replaced by resolve_leaves )
 ;
 
 : resolve_leaves ( C: loop-orig here/unloop-dest -- )
-    dup rot
+    dup rot 1 cells - ( Catch a ?do branch )
     do
         i @ 0xf2f1 = if
-            ['] branch i 2 - @ = if
+            i 2 - @ dup
+            ['] branch =
+            swap
+            ['] qbranch = or if
                 dup i !
             then
         then

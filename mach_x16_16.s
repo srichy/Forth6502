@@ -4,6 +4,9 @@ mach_init0:
 mach_init1:
     rts
 
+mach_reset:
+    jmp start
+
 mach_dbg:
     ;; A has low order of new IP
     rts

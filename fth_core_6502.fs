@@ -855,7 +855,7 @@ finished
 END-CODE
 
 CODE bye
-    jmp start
+    jmp mach_reset
 END-CODE
 
 CODE >r

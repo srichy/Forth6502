@@ -13,6 +13,9 @@ mach_init1:
     jsr con_init
     rts
 
+mach_reset:
+    jmp start
+
 mach_hex_char:
     .ax8
     lda 1,s

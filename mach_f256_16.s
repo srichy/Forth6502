@@ -126,6 +126,20 @@ mach_init1:
     sta 1
     rts
 
+mach_reset:
+    .ax8
+    stz 1
+    lda #$de
+    sta $d6a2
+    lda #$ad
+    sta $d6a3
+    lda $d6a0
+    ora #$80
+    sta $d6a0
+    and #$7f
+    sta $d6a0
+    ;; Reset-we should never reach here.
+
 mach_hex_char:
     .ax8
     tsx
