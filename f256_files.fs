@@ -110,7 +110,7 @@ END-CODE
     dup push-source-id
     begin
         tib dup tiblen 2 - source-id read-line if
-            pop-source-id
+            pop-source-id drop
             1 abort" File read failed.  include-file aborted."
         then
     while ( flag is true; we have not reached EOF yet )
@@ -120,7 +120,7 @@ END-CODE
             interpret
         then
     repeat
-    pop-source-id
+    pop-source-id close-file
 ;
 
 : included ( i*x c-addr u -- j*x )

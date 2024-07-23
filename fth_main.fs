@@ -1009,10 +1009,19 @@ CODE pop-source-id
     .if proc=="65816"
     .ax8
     .endif
-    lda source_id_sp
-    cmp #7
-    bge _done
+    ldx source_id_sp
+    cpx #7
+    bge _empty
+    lda #0
+    pha
+    lda source_id_stk,x
+    pha
     inc source_id_sp
+    bra _done
+_empty:
+    lda #$ff
+    pha
+    pha
 _done:
 END-CODE
 
