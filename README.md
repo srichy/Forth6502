@@ -26,3 +26,13 @@ I removed the old ones.  They were hugely out-of-date.
   - Page Zero $00 - $22 unavailable
   - Page Zero $f0 - $ff may be unavailable
   - $7e00 - $7fff unavailable
+
+# Credits and References
+
+I can't recommend enough
+[Brad Rodriguez'](http://www.bradrodriguez.com/papers/) writings on Forth
+internals.
+
+Also, I have to chase down where I got the number parsing code.  If
+you recognize it, let me know and I'll add the credit or remove it and
+rewrite it or whatever.
