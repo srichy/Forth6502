@@ -104,6 +104,7 @@ next_immediate
     /mod drop
 ;
 
+next_unlisted
 : do_bs ( a-end a-cur a-beg -- a-end a-cur 0 ; R: +n1 a-beg -- )
     over < if
         get_bs emit
@@ -112,6 +113,7 @@ next_immediate
     0 ( continue taking keys )
 ;
 
+next_unlisted
 : do_insert ( a-end a-cur k -- a-end a-cur n 0|-1 )
     dup emit
     over c!
@@ -152,6 +154,7 @@ next_immediate
     then
 ;
 
+next_unlisted
 : append_counted ( c c-addr -- )
     dup >r ( c c-addr; r: c-addr -- )
     dup c@ + 1+ c!
@@ -206,20 +209,28 @@ next_immediate
 
 132 CONSTANT tiblen
 VARIABLE tib 132 XALLOT
+next_unlisted
 VARIABLE word_space 128 XALLOT
+next_unlisted
 128 CONSTANT squote_size
+next_unlisted
 VARIABLE squote_store 128 XALLOT
 
+next_unlisted
 12 CONSTANT pic_num_size
+next_unlisted
 VARIABLE pic_num_off
+next_unlisted
 VARIABLE pic_num 12 XALLOT
 
 VARIABLE base
 VARIABLE >in
 VARIABLE state
+next_unlisted
 VARIABLE dict_start
 32 CONSTANT bl
 
+next_unlisted
 2VARIABLE ticksource
 
 : source
@@ -287,10 +298,7 @@ next_immediate
     10 emit
 ;
 
-: splat ( -- )
-    42 emit
-;
-
+next_unlisted
 : find_with_prev ( c-addr -- c-addr 0 prev | xt 1 prev | xt -1 prev )
     dict_start @
 
@@ -344,6 +352,7 @@ next_immediate
     rot >r r@ rot - - r> swap
 ;
 
+next_unlisted
 : check_sign ( c-addr n -- 1|-1 c-addr n )
     dup 1 > if
         over c@ case
@@ -356,6 +365,7 @@ next_immediate
     then
 ;
 
+next_unlisted
 : check_base ( c-addr n -- c-addr n -- )
     dup 2 > if
         over c@ 0x30 <> if
@@ -373,6 +383,7 @@ next_immediate
     then
 ;
 
+next_unlisted
 : c_to_i_raw ( c -- n )
     dup 97 >= if
         87 -
@@ -393,6 +404,7 @@ next_immediate
     abort" WORD NOT FOUND"
 ;
 
+next_unlisted
 : str_to_int ( c-addr n -- n )
     0 swap 0 do
         ( c-addr accum -- )
@@ -403,6 +415,7 @@ next_immediate
     swap drop
 ;
 
+next_unlisted
 : chk_num_start ( c-addr -- )
     dup c@ 0= if
       drop exit
@@ -422,6 +435,7 @@ next_immediate
 3. Multiply accumulator by base then add current digit
 4. Check for more digits, loop to 3
 )
+next_unlisted
 : try_number ( c-addr -- n )
     base @ >r
 
@@ -484,6 +498,7 @@ next_immediate
     cr
 ;
 
+next_unlisted
 : cstr_to_here ( c-str maxlen -- )
     here over bl fill
     dup >r
@@ -492,6 +507,7 @@ next_immediate
     r> allot
 ;
 
+next_unlisted
 : do_dict_entry ( action "<spaces>name" -- )
     here
     bl word HDR_SIZE cstr_to_here
@@ -602,6 +618,7 @@ next_immediate
     p0 quit
 ;
 
+next_unlisted
 : qabort ( flag addr n -- )
     rot if
         type abort
@@ -693,6 +710,7 @@ next_immediate
     ['] branch , 0xf2f1 , ( These 0xf2f1s will get replaced by resolve_leaves )
 ;
 
+next_unlisted
 : resolve_leaves ( C: loop-orig here/unloop-dest -- )
     dup rot 1 cells - ( Catch a ?do branch )
     do
@@ -729,16 +747,6 @@ next_immediate
 
 : buffer: ( u "<name>" -- ; -- addr )
     create allot
-;
-
-: hello
-    s" HELLO, WORLD!"
-    type
-;
-
-: abort_test
-    1 abort" This should print then abort."
-    s" This should not print." type
 ;
 
 : disp_char ( c -- )
@@ -818,6 +826,7 @@ next_immediate
     then
 ;
 
+next_unlisted
 : print_name ( name-addr -- )
     dup 1+ swap c@ 0x7f and dup MAX_NM_LEN 1+ < if
         type
@@ -839,27 +848,6 @@ next_immediate
         print_name bl emit
         r> HDR_SIZE + @
     repeat
-;
-
-: plt ( plus loop test )
-    ." Testing +LOOP..." cr
-
-    ." [1] 0-4 +2" cr
-    4 0 do
-        i . bl emit
-        2
-    +loop
-    cr ." [1] Done." cr
-
-    ." [2] 1-4 +2" cr
-    4 1 do
-        i . bl emit
-        i 5 = if
-            brk
-        then
-        2
-    +loop
-    cr ." [2] Done. " cr
 ;
 
 : hex
@@ -947,6 +935,7 @@ END-CODE
 [THEN]
 [THEN]
 
+next_unlisted
 : cold
     here0
     10 base !

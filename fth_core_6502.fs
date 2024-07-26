@@ -117,6 +117,7 @@ CODE brk
     brk
 END-CODE
 
+next_unlisted
 CODE init_serial
     jsr con_init
 END-CODE
@@ -146,6 +147,7 @@ CODE exit
     jsr rpop1
 END-CODE
 
+next_unlisted
 CODE p0
     ldx #$ff
     txs
@@ -224,6 +226,7 @@ CODE key
     pha
 END-CODE
 
+next_unlisted
 CODE unloop
     jsr rpop2
 END-CODE
@@ -248,6 +251,7 @@ CODE rdepth
     pha
 END-CODE
 
+next_unlisted
 CODE rbase
     lda #0
     pha
@@ -821,6 +825,7 @@ CODE c!
     pla
 END-CODE
 
+next_unlisted
 CODE branch
     ldy #1
     lda (ip)
@@ -830,6 +835,7 @@ CODE branch
     stx ip
 END-CODE
 
+next_unlisted
 CODE qbranch
     pla
     bne no_branch1
@@ -989,6 +995,7 @@ CODE k
 END-CODE
 
 ( full loop terminator include dropping loop counters from rstk )
+next_unlisted
 CODE do_loop
     ;; Increment loop counter
     ldx rsp
@@ -1025,6 +1032,7 @@ finished:
 END-CODE
 
 ( full loop terminator include dropping loop counters from rstk )
+next_unlisted
 CODE do_plus_loop
     ;; Increment loop counter
     ldx rsp
@@ -1063,6 +1071,7 @@ finished:
 END-CODE
 
 ( loop terminator that does not clear the rstk )
+next_unlisted
 CODE do_loop1
     ldx rsp
     inc rstk+1,x
@@ -1093,6 +1102,7 @@ loop_again:
 finished:   
 END-CODE
 
+next_unlisted
 CODE do_plus_loop1
     ;; Increment loop counter
     ldx rsp
@@ -1130,6 +1140,7 @@ loop_again:
 finished:
 END-CODE
 
+next_unlisted
 CODE here0
     lda edata
     sta here_store
@@ -1246,6 +1257,7 @@ incdest
 finished
 END-CODE
 
+next_unlisted
 CODE get_bs
     lda #0
     pha
@@ -1257,6 +1269,7 @@ CODE hex_char
     jmp mach_hex_char
 END-CODE
 
+next_unlisted
 CODE dec_num
     pla
     jsr prt_dec_num
