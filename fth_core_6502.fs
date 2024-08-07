@@ -1220,7 +1220,7 @@ CODE execute
     sta w
     pla
     sta w+1
-    jmp wjmp
+    jmp (w)
 END-CODE
 
 CODE move

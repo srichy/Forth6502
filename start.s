@@ -74,7 +74,7 @@ start:
     sta w
     lda #>w_cold.cfa
     sta w+1
-    jmp wjmp
+    jmp (w)
     ;; The following should never be reached
     bra start
 
@@ -84,7 +84,7 @@ do_next:
     sta w
     lda (ip),y
     sta w+1
-    jsr mach_dbg
+    ;; jsr mach_dbg
     clc
     lda ip
     adc #2
@@ -92,7 +92,7 @@ do_next:
     lda ip+1
     adc #0
     sta ip+1
-    jmp wjmp
+    jmp (w)
 
     ;; Turn A into three ASCII digit bytes
     ;; print each in order.

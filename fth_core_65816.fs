@@ -877,7 +877,7 @@ END-CODE
 CODE execute
     pla
     sta w
-    jmp wjmp
+    jmp (w)
 END-CODE
 
 CODE move

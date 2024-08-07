@@ -828,12 +828,21 @@ next_immediate
 
 next_unlisted
 : print_name ( name-addr -- )
-    dup 1+ swap c@ 0x7f and dup MAX_NM_LEN 1+ < if
-        type
+    count 0x7f and dup >r MAX_NM_LEN min
+    type
+
+    r> MAX_NM_LEN 2dup > if
+        ?do
+        [DEFINED] ARCH_F256 [IF]
+          0xe2
+        [ELSE]
+          0x7e
+        [THEN]
+        emit
+
+        loop
     else
-        ( Name is longer than MAX_NM_LEN chars; show length )
-        <# 62 hold #s 60 hold #> type
-        MAX_NM_LEN type
+        2drop
     then
 ;
 
