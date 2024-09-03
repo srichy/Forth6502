@@ -357,20 +357,26 @@ END-CODE
 CODE lshift
     ply
     pla
-_again:
+    cpy #0
+    beq done
+again:
     asl a
     dey
-    bne _again
+    bne again
+done:
     pha
 END-CODE
 
 CODE rshift
     ply
     pla
-_again:
+    cpy #0
+    beq done
+again:
     lsr a
     dey
-    bne _again
+    bne again
+done:
     pha
 END-CODE
 

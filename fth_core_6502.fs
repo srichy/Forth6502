@@ -467,13 +467,16 @@ END-CODE
 CODE lshift
     pla
     tay
-    pla
+    pla                         ; discard high-order byte of counter
     tsx
-_again:
+    cpy #0
+    beq done
+again:
     asl $101,x
     rol $102,x
     dey
-    bne _again
+    bne again
+done:
 END-CODE
 
 CODE rshift
@@ -481,11 +484,14 @@ CODE rshift
     tay
     pla
     tsx
-_again:
+    cpy #0
+    beq done
+again:
     lsr $102,x
     ror $101,x
     dey
-    bne _again
+    bne again
+done:
 END-CODE
 
 CODE =
