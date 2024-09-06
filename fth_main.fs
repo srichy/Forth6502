@@ -952,6 +952,10 @@ next_unlisted
     init_serial
     core_dict @ dict_start !
 
+    [DEFINED] ARCH_X16 [IF]
+    x16_init
+    [THEN]
+
     char_block 0 20 at-xy
 
     ." HOLDFORTH 0.1" cr
@@ -1026,5 +1030,11 @@ END-CODE
 [DEFINED] ARCH_F256 [IF]
 
 include f256_files.fs
+
+[THEN]
+
+[DEFINED] ARCH_X16 [IF]
+
+include x16_files.fs
 
 [THEN]
