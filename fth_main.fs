@@ -1035,6 +1035,6 @@ include f256_files.fs
 
 [DEFINED] ARCH_X16 [IF]
 
-include x16_files.fs
+include c64_kernal.fs
 
 [THEN]
