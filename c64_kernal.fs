@@ -1,5 +1,7 @@
 ( -*- forth-asm -*- )
 
+( c64_kernal; was x16_files; but this is almost 100% KERNAL )
+
 : x16_init ( FIXME: this needs to go into a different file )
     0 K_FD_BITS ! ( No files open at start )
 ;
@@ -48,7 +50,7 @@ VARIABLE K_FD_BITS
     k_reset_io
 ;
 
-( A X Y KERNAL_FUNC -- A )
+( A X Y KERNAL_FUNC -- A 0|-1 )
 CODE call_kernal
     .if proc=="65816"
     pla
@@ -172,7 +174,7 @@ END-CODE
 ;
 
 : include-file ( i*x fileid -- j*x )
-    dup push-source-id
+    push-source-id
     begin
         tib dup tiblen 2 - source-id read-line if
             pop-source-id drop
@@ -183,9 +185,12 @@ END-CODE
             ticksource 2!
             0 >in !
             interpret
+        else
+            2drop
         then
     repeat
-    pop-source-id close-file
+    2drop
+    pop-source-id close-file drop
 ;
 
 : included ( i*x c-addr u -- j*x )
@@ -228,19 +233,6 @@ END-CODE
 VARIABLE xin 128 XALLOT
 128 CONSTANT xinlen
 
-: test-read-line ( "filename" -- b )
-    bl word count R/O open-file abort" open-file failed"
-    dup >r xin dup xinlen r> read-line abort" read-line failed" drop
-    type cr
-    dup >r xin dup xinlen r> read-line abort" read-line failed" drop
-    type cr
-    dup >r xin dup xinlen r> read-line abort" read-line failed" drop
-    type cr
-    dup >r xin dup xinlen r> read-line abort" read-line failed" drop
-    type cr
-    close-file abort" close-file failed"
-;
-
 ( First version is going to be sloooooow. )
 : read-line ( c-addr u1 fileid -- u2 flag ior )
     2 pick >r ( save original buffer addr )
@@ -257,7 +249,8 @@ VARIABLE xin 128 XALLOT
     r> drop ( fileid no longer needed )
     ( end-addr cur-addr c )
     -1 = if ( We hit EOF )
-        dup r> = if ( At EOF, and we read nothing )
+        dup r@ = if ( At EOF, and we read nothing )
+            r> drop
             2drop 0 0 0
             exit
         then
