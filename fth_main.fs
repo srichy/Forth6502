@@ -104,6 +104,36 @@ next_immediate
     /mod drop
 ;
 
+[DEFINED] ARCH_X16 [IF]
+
+next_unlisted
+: do_insert ( a-end a-cur k -- a-end a-cur 0|-1 )
+    over c!
+    2dup > if ( do we have room for more chars ? )
+        1+ 0
+    else
+        -1 ( No more room; exit key taking loop )
+    then
+;
+
+: accept ( a-beg +n1 -- +n2 )
+    dup >r ( r: +n1 -- )
+    over dup >r + swap
+
+    ( a-end a-beg -- ; r: +n1 a-beg -- )
+    begin
+        key case
+            10 of cr -1 endof
+            13 of cr -1 endof
+            do_insert 0
+        endcase
+    until
+    -
+    r> drop r> swap -
+;
+
+[ELSE]
+
 next_unlisted
 : do_bs ( a-end a-cur a-beg -- a-end a-cur 0 ; R: +n1 a-beg -- )
     over < if
@@ -141,6 +171,7 @@ next_unlisted
     -
     r> drop r> swap -
 ;
+[THEN]
 
 : is_delim ( c delim -- f )
     dup bl = if ( if delim is the bl, then match any space )
@@ -857,6 +888,7 @@ next_unlisted
         print_name bl emit
         r> HDR_SIZE + @
     repeat
+    cr
 ;
 
 : hex
@@ -877,7 +909,7 @@ next_unlisted
     then
 ;
 
-: char_block
+: char-block
     16 0 do
         16 0 do
             i 0= if
@@ -890,7 +922,10 @@ next_unlisted
                 i hex_char emit
             then
             i 2 + j 2 + at-xy
-            i j 4 lshift + emit
+            i j 4 lshift + dup 127 and 32 < if
+                drop 32
+            then
+            emit
         loop
     loop
 ;
@@ -956,7 +991,7 @@ next_unlisted
     x16_init
     [THEN]
 
-    char_block 0 20 at-xy
+    ( char-block 0 20 at-xy )
 
     ." HOLDFORTH 0.1" cr
 
