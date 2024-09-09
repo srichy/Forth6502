@@ -922,7 +922,7 @@ next_unlisted
                 i hex_char emit
             then
             i 2 + j 2 + at-xy
-            i 4 lshift j + dup 127 and 32 < if
+            i j 4 lshift + dup 127 and 32 < if
                 drop 32
             then
             emit
