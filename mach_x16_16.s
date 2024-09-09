@@ -20,8 +20,8 @@ mach_hex_char:
     lda 1,s
     cmp #10
     bcc _is_digit
-    sec
-    sbc #9
+    clc
+    adc #55
     bra _done
 _is_digit:
     clc

@@ -19,8 +19,8 @@ mach_hex_char:
     lda $101,x
     cmp #10
     bcc _is_digit
-    sec
-    sbc #9
+    clc
+    adc #55
     bra _done
 _is_digit:
     clc
@@ -170,6 +170,7 @@ scrptr: .addr ?
 gotoxy:
     clc
     jsr $fff0
+    rts
 
     ;; A has the number of lines.  >=60 is "clear screen"
     ;; mac0,1 == dest
