@@ -207,8 +207,8 @@ pagesize:
     ;; ESC[row;colH
     ;; where row = y, col = x
 gotoxy:
-    phx
     phy
+    phx
     lda #27                     ;ESC
     jsr con_tx
     lda #"["

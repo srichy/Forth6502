@@ -36,3 +36,16 @@ internals.
 Also, I have to chase down where I got the number parsing code.  If
 you recognize it, let me know and I'll add the credit or remove it and
 rewrite it or whatever.
+
+# One of Gadget's Ideas
+
+"Over travel &c this morning, I sketched out a 65c02 specific set of
+ core Forth words.  DTC, RS in zp, PS on the hardware stack, TOS in
+ Y:A, base IP in zp w/ relative IP in X.  I sketched out push, pop,
+ drop, +, @, !, ENTER, LEAVE, and, of course, NEXT, which is in-lined."
+
+Also, "8-bit jump offsets".
+
+# From andrew2936
+
+https://theultimatebenchmark.org/

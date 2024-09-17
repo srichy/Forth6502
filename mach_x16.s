@@ -5,7 +5,10 @@ mach_init1:
     rts
 
 mach_reset:
-    jmp start
+    ldx #$42
+    ldy #$02
+    lda #$00
+    jsr $FEC9
 
 mach_dbg:
     ;; A has low order of new IP
@@ -16,8 +19,8 @@ mach_hex_char:
     lda $101,x
     cmp #10
     bcc _is_digit
-    sec
-    sbc #9
+    clc
+    adc #55
     bra _done
 _is_digit:
     clc
@@ -29,47 +32,18 @@ _done:
 con_init:
     jsr $ff81                   ; CINT
     lda #$0f                    ; ISO mode
-    sta screen_y                ; force recompute in gotoxy
     jsr $FFD2
     ldx #0
     ldy #0
     jsr gotoxy
     rts                         ; Using C64-compatible kernal chrin/chrout
 
-con_tx0:
+con_tx:
     jsr $FFD2                   ; C64 CHROUT
     rts
 
-con_tx:
-    cmp #20                      ; backspace
-    bne _maybe_13
-    jmp do_bs
-_maybe_13
-    cmp #13
-    bne _maybe_10
-    ldx #0
-    ldy screen_y
-    jmp gotoxy
-_maybe_10
-    cmp #10
-    bne _doout
-    ldy screen_y
-    iny
-    cpy #59
-    bcc _no_scroll
-    lda #1
-    jsr scroll_up
-    ldy screen_y
-_no_scroll:
-    ldx screen_x
-    jmp gotoxy
-_doout
-    jmp dispchar
-
 con_rx:
--   jsr $FFE4                   ; C64 GETIN
-    cmp #0
-    beq -
+    jsr $FFCF                   ; C64 CHRIN
     rts
 
 raw_bs:
@@ -193,71 +167,9 @@ screen_x: .byte ?
 screen_y: .byte ?
 scrptr: .addr ?
 
-dispchar:
-    sta vera_data0
-    ldy screen_y
-    inc screen_x
-    ldx screen_x
-    cpx #80
-    bcc _done
-    iny
-    stz screen_x
-    ldx #0
-    cpy #60
-    bcc _done
-    lda #1
-    jsr scroll_up
-    ldx #0
-    ldy #59
-_done:
-    jmp gotoxy
-
 gotoxy:
-    pha
-    stx screen_x
-    cpy screen_y
-    beq _add_col
-    sty screen_y
-    lda #<vera_text_base
-    sta scrptr
-    lda #>vera_text_base
-    sta scrptr+1
-_add_row:
-    cpy #0
-    beq _add_col
-    dey
-    inc scrptr+1                ; Count by 256, because... VERA!
-    bra _add_row
-_add_col:
-    txa
-    asl                         ; x2; VERA interleaves w/color
     clc
-    adc scrptr
-    sta vera_addrx_l
-    lda #0
-    adc scrptr+1
-    sta vera_addrx_m
-    lda #vera_incr_1_h
-    sta vera_addrx_h
-    pla
-    rts
-
-do_bs:
-    dec screen_x
-    bpl _do_erase
-    inc screen_x
-_do_erase:
-    ldx screen_x
-    ldy screen_y
-    jsr gotoxy
-    ldx screen_x
-    ldy screen_y
-    lda #32
-    jsr dispchar
-    dec screen_x
-    ldx screen_x
-    ldy screen_y
-    jsr gotoxy
+    jsr $fff0
     rts
 
     ;; A has the number of lines.  >=60 is "clear screen"
