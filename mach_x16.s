@@ -169,6 +169,10 @@ scrptr: .addr ?
 
 gotoxy:
     clc
+    phx
+    tya
+    ply
+    tax
     jsr $fff0
     rts
 

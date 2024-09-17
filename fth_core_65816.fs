@@ -159,9 +159,9 @@ END-CODE
 
 CODE at-xy
     pla
-    tax
-    pla
     tay
+    pla
+    tax
     jsr     gotoxy
 END-CODE
 

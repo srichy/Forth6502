@@ -166,10 +166,10 @@ END-CODE
 
 CODE at-xy
     pla
-    tax
-    pla
-    pla
     tay
+    pla
+    pla
+    tax
     pla
     jsr     gotoxy
 END-CODE
