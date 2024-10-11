@@ -558,6 +558,7 @@ next_unlisted
 
 : variable ( "<spaces>name" -- )
     lit var do_dict_entry
+    1 cells allot
 ;
 
 : :
