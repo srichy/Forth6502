@@ -1,23 +1,8 @@
 ( -*- forth-asm -*- )
 
+include word_hdr.fs
+
 HEADLESSCODE
-
-HIGH_W .macro name_len, name, act=w_enter, flgs=0, prev
-dict:
-    .byte (\flgs << 7) | len(\name)
-    .text format("%-7s", \name[:7])
-    .addr \prev
-cfa:
-    jmp \act                  ; CFA
-    .endmacro                   ; PFA implicit, follows macro
-
-CODE_W .macro name_len, name, flgs=0, prev
-dict:
-    .byte (\flgs << 7) | len(\name)
-    .text format("%-7s", \name[:7])
-    .addr \prev
-cfa:
-    .endmacro                   ; PFA implicit, follows macro
 
 NEXT .macro
     jmp do_next
