@@ -32,7 +32,7 @@ fth_main_wdc.s: $(SRC_6502) $(RFC)
 	$(RFC) --arch ca6502 -d ARCH_6502,ARCH_WDC fth_main.fs > $@ || rm fth_main_wdc.s
 
 fth_main_x16.s: $(SRC_6502) c64_kernal.fs $(RFC)
-	$(RFC) --arch ca6502 -d ARCH_6502,ARCH_X16 fth_main.fs > $@ || rm fth_main_x16.s
+	$(RFC) --arch ca6502 -d ARCH_6502,ARCH_X16,ARCH_KERNAL fth_main.fs > $@ || rm fth_main_x16.s
 
 fth_main_f256.s: $(SRC_6502) f256_files.fs $(RFC)
 	$(RFC) --arch ca6502 -d ARCH_6502,ARCH_F256 fth_main.fs > $@ || rm fth_main_f256.s
@@ -52,7 +52,7 @@ fth_main_wdc_16.s: $(SRC_65816) $(RFC)
 	$(RFC) --arch ca6502 -d ARCH_65816,ARCH_WDC fth_main.fs > $@ || rm fth_main_wdc_16.s
 
 fth_main_x16_16.s: $(SRC_65816) c64_kernal.fs $(RFC)
-	$(RFC) --arch ca6502 -d ARCH_65816,ARCH_X16 fth_main.fs > $@ || rm fth_main_x16_16.s
+	$(RFC) --arch ca6502 -d ARCH_65816,ARCH_X16,ARCH_KERNAL fth_main.fs > $@ || rm fth_main_x16_16.s
 
 fth_main_f256_16.s: $(SRC_65816) f256_files.fs $(RFC)
 	$(RFC) --arch ca6502 -d ARCH_65816,ARCH_F256 fth_main.fs > $@ || rm fth_main_f256_16.s

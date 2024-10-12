@@ -629,6 +629,10 @@ next_immediate
         interpret
         state @ 0= if
             bl emit ." OK "
+            [DEFINED] ARCH_KERNAL [IF]
+                ( We are using the screen editor, so start on a clear line )
+                cr
+            [THEN]
         then
         0
     until
