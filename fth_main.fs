@@ -69,10 +69,13 @@ next_immediate
     dup 1+ swap c@
 ;
 
-: cstr_cmp ( c-addr1 dict_start -- f )
-    dup c@ 0x7f and rot dup c@ rot over = if
-        ( Limit to MAX_NM_LEN significant chars )
-        MAX_NM_LEN min
+next_unlisted
+: dict_str_cmp ( c-addr1 dict_start -- f )
+    3 - dup c@ 0x7f and ( c-addr1 dict_start-1 dslen -- )
+    rot dup c@ ( dict_start-1 dslen c-addr1 c-addr-len -- )
+    rot over = ( dict_start-1 c-addr1 c-addr-len leneq-flg -- ) if
+        ( dict_start-1 c-addr1 c-addr-len -- )
+        >r swap r@ - 1- ( fake a counted string ) swap r>
         0 do
             1+ swap 1+
             ( case-insensitive search for ASCII only! )
@@ -339,8 +342,8 @@ next_unlisted
         ?dup
     while ( c-addr dict_start -- )
             2dup >r >r ( c-addr dict_start -- ) ( R: dict_start c-addr -- )
-            cstr_cmp if
-                r> drop r> dup dict_to_cfa swap c@ 128 and if
+            dict_str_cmp if
+                r> drop r> dup swap c@ 128 and if
                     1
                 else
                     -1
@@ -831,7 +834,7 @@ next_immediate
 ;
 
 : xt>name ( xt -- addr len )
-    HDR_SIZE - 2 - count 127 and
+    3 - dup c@ 127 and
 ;
 
 : see ( "<spaces>name" -- )

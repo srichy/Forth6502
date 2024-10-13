@@ -1248,6 +1248,11 @@ incdest
 finished
 END-CODE
 
+( c-addr1 u1 c-addr2 u2 -- f )
+CODE compare
+    nop                         ;fixme
+END-CODE
+
 next_unlisted
 CODE get_bs
     lda #0
@@ -1269,7 +1274,3 @@ END-CODE
 
 8 CONSTANT HDR_SIZE
 7 CONSTANT MAX_NM_LEN
-
-: dict_to_cfa ( entry-addr -- cfa-addr )
-    HDR_SIZE + 1 cells +
-;

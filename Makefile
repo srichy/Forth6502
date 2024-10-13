@@ -7,8 +7,8 @@ TARGETS = wdcForth x16Forth.prg f256Forth.pgz wdcForth16 x16Forth16.prg f256Fort
 
 all: $(TARGETS)
 
-SRC_6502 = fth_main.fs fth_core_6502.fs
-SRC_65816 = fth_main.fs fth_core_65816.fs
+SRC_6502 = fth_main.fs word_hdr.fs fth_core_6502.fs
+SRC_65816 = fth_main.fs word_hdr.fs fth_core_65816.fs
 SRC_WDC = start.s fth_main_wdc.s mach_wdc.s
 SRC_X16 = start.s fth_main_x16.s mach_x16.s x16.inc
 SRC_F256 = start.s fth_main_f256.s mach_f256.s

@@ -898,6 +898,47 @@ _move_positive:
 _done:
 END-CODE
 
+( c-addr1 u1 c-addr2 u2 -- f )
+CODE compare
+    lda 5,s
+    cmp 1,s                     ; U1 cmp U2
+    bcc do_cmp0                 ; U1 is < U2
+    lda 1,s
+do_cmp0:                        ; A has count
+    tax                         ; X has count
+    ldy #0                      ; Y has string offset (for (d,s),y addr mode)
+do_cmp1:
+    lda (7,s),y
+    cmp (5,s),y
+    bne is_different
+    iny
+    dex
+    bne do_cmp1
+    ; We're same to here.  Check lengths
+    lda 5,s
+    cmp 1,s
+    bcc return_less
+    beq return_eq
+    bra return_greater
+is_different:
+    bcc return_less
+    bra return_greater
+return_less:
+    lda #-1
+    bra done
+return_eq:
+    lda #0
+    bra done
+return_greater:
+    lda #1
+done:
+    sta 7,s                     ; store comparison result in soon-to-be TOS
+    clc
+    tsc
+    adc #6                      ; remove top three args
+    tcs
+END-CODE
+
 next_unlisted
 CODE get_bs
     .a8
@@ -919,7 +960,3 @@ END-CODE
 
 8 CONSTANT HDR_SIZE
 7 CONSTANT MAX_NM_LEN
-
-: dict_to_cfa ( entry-addr -- cfa-addr )
-    HDR_SIZE + 1 cells +
-;
