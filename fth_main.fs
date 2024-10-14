@@ -71,17 +71,16 @@ next_immediate
 
 next_unlisted
 : dict_str_cmp ( c-addr1 dict_start -- f )
-    3 - dup c@ 0x7f and ( c-addr1 dict_start-1 dslen -- )
-    rot dup c@ ( dict_start-1 dslen c-addr1 c-addr-len -- )
-    rot over = ( dict_start-1 c-addr1 c-addr-len leneq-flg -- ) if
-        ( dict_start-1 c-addr1 c-addr-len -- )
-        >r swap r@ - 1- ( fake a counted string ) swap r>
+    xt>name ( c-addr1 dict_name dict_name_len -- )
+    rot count ( dict_name dict_name_len c-addr1+1 c-addr-len -- )
+    rot over = ( dict_name c-addr1+1 c-addr-len leneq-flg -- ) if
+        ( dict_name c-addr1+1 c-addr-len -- )
         0 do
-            1+ swap 1+
             ( case-insensitive search for ASCII only! )
             dup c@ 0xdf and rot dup c@ 0xdf and rot <> if
                 2drop unloop 0 exit
             then
+            1+ swap 1+
         loop
         2drop
         -1
@@ -338,12 +337,12 @@ next_unlisted
 
     here >r
     begin
-        ( c-addr dict_next -- )
+        ( c-addr dict_next -- ) ( R: here -- )
         ?dup
     while ( c-addr dict_start -- )
-            2dup >r >r ( c-addr dict_start -- ) ( R: dict_start c-addr -- )
+            2dup >r >r ( c-addr dict_start -- ) ( R: here dict_start c-addr -- )
             dict_str_cmp if
-                r> drop r> dup swap c@ 128 and if
+                r> drop r> dup 3 - c@ 128 and if
                     1
                 else
                     -1
@@ -352,7 +351,7 @@ next_unlisted
                 exit
             then
             r> r> r> drop dup >r
-            HDR_SIZE + @
+            2 - @
     repeat
     0
     r>
@@ -533,19 +532,18 @@ next_unlisted
 ;
 
 next_unlisted
-: cstr_to_here ( c-str maxlen -- )
-    here over bl fill
-    dup >r
-    over c@ 1+ min ( c-str min -- )
-    here swap move
-    r> allot
+: cstr_to_here ( c-str -- )
+    count here swap
+    dup >r ( c-addr here n -- ) ( R: n -- )
+    move
+    r> dup allot c,
 ;
 
 next_unlisted
 : do_dict_entry ( action "<spaces>name" -- )
-    here
-    bl word HDR_SIZE cstr_to_here
+    bl word cstr_to_here
     dict_start @ ,
+    here
     0x4c c, swap ,
     dict_start !
 ;
@@ -676,7 +674,7 @@ next_immediate
 ;
 
 : immediate
-    dict_start @ dup c@ 0x80 or swap c!
+    dict_start @ 3 - dup c@ 0x80 or swap c!
 ;
 
 next_immediate
@@ -863,26 +861,6 @@ next_immediate
     else
         r> drop
         ." Cannot find '" count type ." '."
-    then
-;
-
-next_unlisted
-: print_name ( name-addr -- )
-    count 0x7f and dup >r MAX_NM_LEN min
-    type
-
-    r> MAX_NM_LEN 2dup > if
-        ?do
-        [DEFINED] ARCH_F256 [IF]
-          0xe2
-        [ELSE]
-          0x7e
-        [THEN]
-        emit
-
-        loop
-    else
-        2drop
     then
 ;
 

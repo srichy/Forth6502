@@ -957,6 +957,3 @@ CODE dec_num
     pla
     jsr prt_dec_num
 END-CODE
-
-8 CONSTANT HDR_SIZE
-7 CONSTANT MAX_NM_LEN
