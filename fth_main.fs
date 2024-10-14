@@ -835,6 +835,7 @@ next_immediate
 
 : xt>name ( xt -- addr len )
     3 - dup c@ 127 and
+    swap over - swap
 ;
 
 : see ( "<spaces>name" -- )
@@ -893,8 +894,8 @@ next_unlisted
         ?dup
     while ( dict_next -- )
         dup >r ( dict_start -- ) ( R: dict_start -- )
-        print_name bl emit
-        r> HDR_SIZE + @
+        xt>name type bl emit
+        r> 2 - @
     repeat
     cr
 ;
